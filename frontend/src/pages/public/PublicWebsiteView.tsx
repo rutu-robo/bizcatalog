@@ -269,8 +269,8 @@ export const PublicWebsiteView: React.FC = () => {
         // 1. FLOATING ISLAND (Melayang / Mengambang)
         if (headerStyle === 'floating') {
           return (
-            <div className="sticky top-3 sm:top-4 z-40 max-w-6xl mx-auto px-4 sm:px-6 pointer-events-none transition-all duration-300">
-              <header className="pointer-events-auto rounded-2xl sm:rounded-full backdrop-blur-xl backdrop-saturate-150 bg-white/75 shadow-xl border border-white/60 px-4 sm:px-6 h-16 flex items-center justify-between transition-all">
+            <div className="fixed top-3 sm:top-4 left-0 right-0 z-40 max-w-6xl mx-auto px-4 sm:px-6 pointer-events-none transition-all duration-300">
+              <header className="pointer-events-auto rounded-2xl sm:rounded-full backdrop-blur-xl backdrop-saturate-150 bg-white/85 shadow-xl border border-white/60 px-4 sm:px-6 h-16 flex items-center justify-between transition-all">
                 {renderHeaderContent(true)}
               </header>
             </div>
@@ -291,9 +291,9 @@ export const PublicWebsiteView: React.FC = () => {
         // 3. DYNAMIC SCROLL (Transparan di Puncak -> Kaca Blur Frosted Glass Saat Scroll)
         return (
           <header
-            className={`sticky top-0 z-40 transition-all duration-300 ${
+            className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
               isScrolled
-                ? 'backdrop-blur-xl backdrop-saturate-150 bg-white/65 shadow-md border-b border-slate-200/60'
+                ? 'backdrop-blur-xl backdrop-saturate-150 bg-white/80 shadow-md border-b border-slate-200/60'
                 : 'bg-transparent backdrop-blur-none border-b border-transparent shadow-none'
             }`}
           >
@@ -305,140 +305,180 @@ export const PublicWebsiteView: React.FC = () => {
       })()}
 
       {/* Render Dynamic Sections */}
-      {activeSections.map((sec) => {
-        switch (sec.type) {
-          case 'hero': {
-            const heroImage =
-              website.logo_url ||
-              products[0]?.image_url ||
-              'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200&auto=format&fit=crop&q=80';
+      {(() => {
+        const headerStyle = website.header_style || 'dynamic-scroll';
+        const isOverlayHeader = headerStyle === 'floating' || headerStyle === 'dynamic-scroll';
 
-            if (sec.variant === 'bg-full') {
-              return (
-                <section key={sec.id} className="relative min-h-[500px] sm:min-h-[560px] flex items-center justify-center border-b border-slate-800 overflow-hidden text-white">
-                  <div className="absolute inset-0 z-0">
-                    <img
-                      src={heroImage}
-                      alt="Hero Background"
-                      className="w-full h-full object-cover filter brightness-[0.4]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" />
-                  </div>
+        return activeSections.map((sec, index) => {
+          const isFirstSection = index === 0;
 
-                  <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center space-y-6">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold tracking-wide backdrop-blur-md">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-                      <span>{website.tagline || 'Toko Resmi Terpercaya'}</span>
+          switch (sec.type) {
+            case 'hero': {
+              const heroImage =
+                sec.bg_image_url ||
+                website.logo_url ||
+                products[0]?.image_url ||
+                'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200&auto=format&fit=crop&q=80';
+
+              if (sec.variant === 'bg-full') {
+                const contentPadding = isOverlayHeader && isFirstSection
+                  ? 'pt-28 sm:pt-36 pb-20 sm:pb-28'
+                  : 'py-20 sm:py-28';
+
+                return (
+                  <section
+                    key={sec.id}
+                    style={{ backgroundColor: sec.bg_color || undefined }}
+                    className="relative min-h-[500px] sm:min-h-[560px] flex items-center justify-center border-b border-slate-800 overflow-hidden text-white"
+                  >
+                    <div className="absolute inset-0 z-0">
+                      <img
+                        src={heroImage}
+                        alt="Hero Background"
+                        className="w-full h-full object-cover filter brightness-[0.4]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" />
                     </div>
 
-                    <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.15] text-white drop-shadow-md">
-                      {sec.title || website.business_name}
-                    </h1>
-
-                    <p className="text-base sm:text-lg text-slate-200 leading-relaxed max-w-2xl mx-auto">
-                      {sec.subtitle || website.description}
-                    </p>
-
-                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                      <a
-                        href="#katalog"
-                        className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all"
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                        <span>Belanja Sekarang</span>
-                      </a>
-                      <a
-                        href={createWhatsAppLink()}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-sm backdrop-blur-md hover:scale-105 transition-all"
-                      >
-                        <MessageCircle className="w-4 h-4 text-emerald-400" />
-                        <span>Konsultasi WA</span>
-                      </a>
-                    </div>
-
-                    <div className="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-slate-300">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span>100% Kualitas Terjamin</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-blue-400" />
-                        <span>Pengiriman Cepat & Aman</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                        <span>Pelayanan Terbaik</span>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              );
-            }
-
-            if (sec.variant === 'card-rounded') {
-              return (
-                <section key={sec.id} className={`py-8 sm:py-12 border-b ${theme.borderClass}`}>
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="relative rounded-3xl sm:rounded-[2.5rem] overflow-hidden min-h-[460px] shadow-2xl flex items-center">
-                      <div className="absolute inset-0 z-0">
-                        <img
-                          src={heroImage}
-                          alt="Hero Card"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/75 to-slate-900/30" />
+                    <div className={`relative z-10 max-w-4xl mx-auto px-4 sm:px-6 ${contentPadding} text-center space-y-6`}>
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold tracking-wide backdrop-blur-md">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                        <span>{website.tagline || 'Toko Resmi Terpercaya'}</span>
                       </div>
 
-                      <div className="relative z-10 p-8 sm:p-14 max-w-2xl text-white space-y-5">
-                        <span className="inline-block text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white">
-                          {website.tagline || 'Katalog Pilihan'}
-                        </span>
-                        <h1 className="text-3xl sm:text-5xl font-black leading-tight text-white drop-shadow-sm">
-                          {sec.title || website.business_name}
-                        </h1>
-                        <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
-                          {sec.subtitle || website.description}
-                        </p>
-                        <div className="flex flex-wrap gap-3 pt-2">
-                          <a
-                            href="#katalog"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-lg hover:scale-105 transition-all"
-                          >
-                            <span>Mulai Belanja</span>
-                            <ArrowRight className="w-4 h-4 text-blue-600" />
-                          </a>
-                          <a
-                            href={createWhatsAppLink()}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs sm:text-sm border border-white/30 backdrop-blur-md transition-all"
-                          >
-                            <MessageCircle className="w-4 h-4 text-emerald-400" />
-                            <span>Chat WhatsApp</span>
-                          </a>
+                      <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.15] text-white drop-shadow-md">
+                        {sec.title || website.business_name}
+                      </h1>
+
+                      <p className="text-base sm:text-lg text-slate-200 leading-relaxed max-w-2xl mx-auto">
+                        {sec.subtitle || website.description}
+                      </p>
+
+                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        <a
+                          href="#katalog"
+                          className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>Belanja Sekarang</span>
+                        </a>
+                        <a
+                          href={createWhatsAppLink()}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-sm backdrop-blur-md hover:scale-105 transition-all"
+                        >
+                          <MessageCircle className="w-4 h-4 text-emerald-400" />
+                          <span>Konsultasi WA</span>
+                        </a>
+                      </div>
+
+                      <div className="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          <span>100% Kualitas Terjamin</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-blue-400" />
+                          <span>Pengiriman Cepat & Aman</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                          <span>Pelayanan Terbaik</span>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </section>
-              );
-            }
+                  </section>
+                );
+              }
 
-            // Default: 'split'
-            return (
-              <section key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+              if (sec.variant === 'card-rounded') {
+                const sectionPadding = isOverlayHeader && isFirstSection
+                  ? 'pt-24 sm:pt-28 pb-8 sm:pb-12'
+                  : 'py-8 sm:py-12';
+
+                return (
+                  <section
+                    key={sec.id}
+                    style={{ backgroundColor: sec.bg_color || undefined }}
+                    className={`${sectionPadding} border-b ${theme.borderClass}`}
+                  >
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                      <div className="relative rounded-3xl sm:rounded-[2.5rem] overflow-hidden min-h-[460px] shadow-2xl flex items-center">
+                        <div className="absolute inset-0 z-0">
+                          <img
+                            src={heroImage}
+                            alt="Hero Card"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/75 to-slate-900/30" />
+                        </div>
+
+                        <div className="relative z-10 p-8 sm:p-14 max-w-2xl text-white space-y-5">
+                          <span className="inline-block text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white">
+                            {website.tagline || 'Katalog Pilihan'}
+                          </span>
+                          <h1 className="text-3xl sm:text-5xl font-black leading-tight text-white drop-shadow-sm">
+                            {sec.title || website.business_name}
+                          </h1>
+                          <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
+                            {sec.subtitle || website.description}
+                          </p>
+                          <div className="flex flex-wrap gap-3 pt-2">
+                            <a
+                              href="#katalog"
+                              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-lg hover:scale-105 transition-all"
+                            >
+                              <span>Mulai Belanja</span>
+                              <ArrowRight className="w-4 h-4 text-blue-600" />
+                            </a>
+                            <a
+                              href={createWhatsAppLink()}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs sm:text-sm border border-white/30 backdrop-blur-md transition-all"
+                            >
+                              <MessageCircle className="w-4 h-4 text-emerald-400" />
+                              <span>Chat WhatsApp</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              }
+
+              // Default: 'split'
+              const isDarkBg = sec.bg_color && (
+                sec.bg_color === '#0f172a' ||
+                sec.bg_color === '#1e1b4b' ||
+                sec.bg_color === '#064e3b' ||
+                sec.bg_color.startsWith('#0') ||
+                sec.bg_color.startsWith('#1') ||
+                sec.bg_color.startsWith('#2')
+              );
+
+              const sectionPadding = isOverlayHeader && isFirstSection
+                ? 'pt-24 sm:pt-28 pb-14 sm:pb-20'
+                : 'py-14 sm:py-20';
+
+              return (
+                <section
+                  key={sec.id}
+                  style={{ backgroundColor: sec.bg_color || undefined }}
+                  className={`${sectionPadding} border-b ${theme.borderClass} ${isDarkBg ? 'text-white' : ''}`}
+                >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10 sm:gap-14 items-center">
                     <div className="space-y-5">
                       <span className={theme.badgeClass}>
                         {website.tagline || 'Katalog Resmi'}
                       </span>
-                      <h1 className={`text-3xl sm:text-5xl ${theme.headingClass} font-black leading-[1.15]`}>
+                      <h1 className={`text-3xl sm:text-5xl ${isDarkBg ? 'text-white' : theme.headingClass} font-black leading-[1.15]`}>
                         {sec.title || website.business_name}
                       </h1>
-                      <p className={`text-sm sm:text-base ${theme.textClass} leading-relaxed`}>
+                      <p className={`text-sm sm:text-base ${isDarkBg ? 'text-slate-200' : theme.textClass} leading-relaxed`}>
                         {sec.subtitle || website.description}
                       </p>
                       <div className="flex flex-wrap gap-3 pt-2">
@@ -453,20 +493,20 @@ export const PublicWebsiteView: React.FC = () => {
                           href={createWhatsAppLink()}
                           target="_blank"
                           rel="noreferrer"
-                          className={`${theme.buttonSecondary} inline-flex items-center gap-2 text-xs sm:text-sm px-5 py-3`}
+                          className={`${isDarkBg ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20' : theme.buttonSecondary} inline-flex items-center gap-2 text-xs sm:text-sm px-5 py-3 rounded-xl transition-all`}
                         >
-                          <MessageCircle className="w-4 h-4" />
+                          <MessageCircle className="w-4 h-4 text-emerald-400" />
                           <span>Konsultasi WA</span>
                         </a>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-200/60 flex items-center gap-6 text-xs text-slate-500">
+                      <div className={`pt-4 border-t ${isDarkBg ? 'border-white/15 text-slate-300' : 'border-slate-200/60 text-slate-500'} flex items-center gap-6 text-xs`}>
                         <div className="flex items-center gap-1.5 font-medium">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                           <span>Kualitas Ekspor</span>
                         </div>
                         <div className="flex items-center gap-1.5 font-medium">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                           <span>Transaksi Aman</span>
                         </div>
                       </div>
@@ -506,7 +546,7 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'full-banner') {
               return (
-                <section id="promo" key={sec.id} className="py-10 border-b border-slate-200/60">
+                <section id="promo" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-10' : 'py-10'} border-b border-slate-200/60`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 rounded-3xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
                       <div className="space-y-4 max-w-xl text-center md:text-left">
@@ -557,7 +597,7 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'split-card') {
               return (
-                <section id="promo" key={sec.id} className={`py-12 sm:py-16 border-b ${theme.borderClass}`}>
+                <section id="promo" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-12 sm:pb-16' : 'py-12 sm:py-16'} border-b ${theme.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white p-8 sm:p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
                       <div className="space-y-4 max-w-xl">
@@ -598,7 +638,7 @@ export const PublicWebsiteView: React.FC = () => {
 
             // Default: 'coupon-ticket'
             return (
-              <section id="promo" key={sec.id} className={`py-12 sm:py-16 border-b ${theme.borderClass}`}>
+              <section id="promo" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-12 sm:pb-16' : 'py-12 sm:py-16'} border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="text-center max-w-2xl mx-auto mb-8">
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-3 py-1 rounded-full mb-2">
@@ -670,7 +710,7 @@ export const PublicWebsiteView: React.FC = () => {
             if (categories.length === 0) return null;
 
             return (
-              <section id="kategori" key={sec.id} className={`py-8 sm:py-12 border-b ${theme.borderClass}`}>
+              <section id="kategori" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-12' : 'py-8 sm:py-12'} border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -851,7 +891,7 @@ export const PublicWebsiteView: React.FC = () => {
 
           case 'catalog': {
             return (
-              <section id="katalog" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+              <section id="katalog" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-14 sm:pb-20' : 'py-14 sm:py-20'} border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
                     <div>
@@ -1670,7 +1710,8 @@ export const PublicWebsiteView: React.FC = () => {
           default:
             return null;
         }
-      })}
+      });
+      })()}
 
       {totalCount > 0 && (
         <div className="fixed bottom-6 right-6 z-40 animate-fade-in">

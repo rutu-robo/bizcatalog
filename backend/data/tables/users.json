@@ -1,0 +1,20 @@
+[
+  {
+    "id": "usr-demo-001",
+    "email": "demo@bizcatalog.com",
+    "password_hash": "$2a$10$itMDfMFQH18sZ7pg4R/l5.WvSNleJ/.qYOhB/lERM2StTWzLwEM2K",
+    "name": "Budi Santoso",
+    "plan": "pro",
+    "created_at": "2026-09-16T13:13:19.785356+07:00",
+    "updated_at": "2026-09-16T13:21:43.655524+07:00"
+  },
+  {
+    "id": "usr-6c5de3c4-d068-4fe5-b587-4ca87d04bddf",
+    "email": "suyotess@gmail.com",
+    "password_hash": "$2a$10$V.nhkrQW/NS8pc.0igWN.e.9ObH6.VcosHqw3S.Hy5Pr/F5cgfzWq",
+    "name": "Suryo",
+    "plan": "free",
+    "created_at": "2026-09-16T14:17:01.742059+07:00",
+    "updated_at": "2026-09-16T15:58:53.662895+07:00"
+  }
+]

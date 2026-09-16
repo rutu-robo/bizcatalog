@@ -1,0 +1,146 @@
+[
+  {
+    "id": "ord-f7249670-d760-49ad-944d-dc17b46a28fe",
+    "website_id": "ws-mebeljaya-001",
+    "order_number": "INV-260916-e11be",
+    "customer_name": "Rian Santoso",
+    "customer_phone": "081298765432",
+    "address": "Jl. Sudirman No. 10, Jakarta Selatan",
+    "notes": "Mohon dikirim akhir pekan",
+    "items": [
+      {
+        "product_id": "prod-001",
+        "product_name": "Meja Makan Kayu Jati Solid 6 Kursi",
+        "price": 4850000,
+        "quantity": 1
+      },
+      {
+        "product_id": "prod-002",
+        "product_name": "Sofa Tamu Minimalis Scandinavian 3 Seater",
+        "price": 3200000,
+        "quantity": 2
+      }
+    ],
+    "subtotal_amount": 0,
+    "shipping_cost": 0,
+    "total_amount": 11250000,
+    "payment_method": "",
+    "payment_status": "",
+    "status": "processing",
+    "created_at": "2026-09-16T13:45:38.959868+07:00",
+    "updated_at": "2026-09-16T13:49:10.30663+07:00"
+  },
+  {
+    "id": "ord-b843f5cc-ef79-454a-a22f-12411484ae88",
+    "website_id": "ws-mebeljaya-001",
+    "order_number": "INV-260916-ea30a",
+    "customer_name": "Rudi Hartono",
+    "customer_phone": "081298765432",
+    "address": "Jl. Sudirman No. 10, Jakarta",
+    "notes": "Tolong kirim dengan packing kayu",
+    "items": [
+      {
+        "product_id": "prod-001",
+        "product_name": "Set Meja Makan Jati Minimalis 6 Kursi",
+        "price": 8500000,
+        "quantity": 2,
+        "image_url": "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=600"
+      }
+    ],
+    "subtotal_amount": 0,
+    "shipping_cost": 0,
+    "total_amount": 17000000,
+    "payment_method": "",
+    "payment_status": "",
+    "status": "processing",
+    "created_at": "2026-09-16T13:52:14.919718+07:00",
+    "updated_at": "2026-09-16T13:52:14.92542+07:00"
+  },
+  {
+    "id": "ord-58b3140d-78b9-4ac0-832b-1cecbd72ac84",
+    "website_id": "ws-mebeljaya-001",
+    "order_number": "INV-260916-ac704",
+    "customer_name": "Budy ",
+    "customer_phone": "081293092010",
+    "address": "Sidodado",
+    "items": [
+      {
+        "product_id": "prod-001",
+        "product_name": "Meja Makan Kayu Jati Solid 6 Kursi",
+        "price": 4850000,
+        "quantity": 1,
+        "image_url": "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=800\u0026auto=format\u0026fit=crop\u0026q=80"
+      },
+      {
+        "product_id": "prod-003",
+        "product_name": "Lemari Pakaian 3 Pintu Kaca Tempered",
+        "price": 5400000,
+        "quantity": 1,
+        "image_url": "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800\u0026auto=format\u0026fit=crop\u0026q=80"
+      }
+    ],
+    "subtotal_amount": 10250000,
+    "shipping_cost": 50000,
+    "total_amount": 10300000,
+    "payment_method": "bank_transfer",
+    "payment_status": "unpaid",
+    "shipping_method": "regular",
+    "status": "pending",
+    "created_at": "2026-09-16T14:10:03.569699+07:00",
+    "updated_at": "2026-09-16T14:10:03.569699+07:00"
+  },
+  {
+    "id": "ord-08059e91-b79a-4293-a384-d894894ececb",
+    "website_id": "ws-mebeljaya-001",
+    "order_number": "INV-260916-18889",
+    "customer_name": "Ahmad Dahlan",
+    "customer_phone": "081987654321",
+    "address": "Jl. Malioboro No. 20, Yogyakarta",
+    "notes": "Tolong kirim dengan palet kayu",
+    "items": [
+      {
+        "product_id": "prod-001",
+        "product_name": "Meja Makan Kayu Jati Solid 6 Kursi",
+        "price": 4850000,
+        "quantity": 1,
+        "image_url": "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=800"
+      }
+    ],
+    "subtotal_amount": 4850000,
+    "shipping_cost": 150000,
+    "total_amount": 5000000,
+    "payment_method": "bank_transfer",
+    "payment_status": "paid",
+    "shipping_method": "cargo",
+    "shipping_courier": "Kargo Truk Ekspedisi Jepara",
+    "tracking_number": "RESI-JPR-20260916",
+    "status": "processing",
+    "created_at": "2026-09-16T14:11:54.176193+07:00",
+    "updated_at": "2026-09-16T14:11:54.260951+07:00"
+  },
+  {
+    "id": "ord-16c42ac2-064d-4442-ada5-c96c4895e4f5",
+    "website_id": "ws-mebeljaya-001",
+    "order_number": "INV-260916-65bfe",
+    "customer_name": "Testing Buyer Modular",
+    "customer_phone": "08123456789",
+    "address": "Jl. Tes Database Modular No. 1",
+    "items": [
+      {
+        "product_id": "prod-001",
+        "product_name": "Meja Makan Kayu Jati Solid 6 Kursi",
+        "price": 4850000,
+        "quantity": 1
+      }
+    ],
+    "subtotal_amount": 4850000,
+    "shipping_cost": 25000,
+    "total_amount": 4875000,
+    "payment_method": "transfer_bank",
+    "payment_status": "unpaid",
+    "shipping_method": "regular",
+    "status": "pending",
+    "created_at": "2026-09-16T20:04:30.072293+07:00",
+    "updated_at": "2026-09-16T20:04:30.072293+07:00"
+  }
+]

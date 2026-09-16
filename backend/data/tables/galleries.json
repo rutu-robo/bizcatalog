@@ -1,0 +1,34 @@
+[
+  {
+    "id": "gal-001",
+    "website_id": "ws-mebeljaya-001",
+    "title": "Proses Perakitan Meja Jati",
+    "image_url": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800\u0026auto=format\u0026fit=crop\u0026q=80",
+    "order": 1,
+    "created_at": "2026-09-16T13:13:19.785356+07:00"
+  },
+  {
+    "id": "gal-002",
+    "website_id": "ws-mebeljaya-001",
+    "title": "Finishing Natural Teak Oil",
+    "image_url": "https://images.unsplash.com/photo-1540574163026-643ea20ade25?w=800\u0026auto=format\u0026fit=crop\u0026q=80",
+    "order": 2,
+    "created_at": "2026-09-16T13:13:19.785356+07:00"
+  },
+  {
+    "id": "gal-003",
+    "website_id": "ws-mebeljaya-001",
+    "title": "Showroom Mebel Jaya Jepara",
+    "image_url": "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800\u0026auto=format\u0026fit=crop\u0026q=80",
+    "order": 3,
+    "created_at": "2026-09-16T13:13:19.785356+07:00"
+  },
+  {
+    "id": "gal-a15a1d62-b850-43be-86ec-53e59e675158",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "title": "Proses Sablon Kaos",
+    "image_url": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500",
+    "order": 0,
+    "created_at": "2026-09-16T15:36:36.916491+07:00"
+  }
+]

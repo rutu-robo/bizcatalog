@@ -1,0 +1,42 @@
+[
+  {
+    "id": "testi-001",
+    "website_id": "ws-mebeljaya-001",
+    "client_name": "Drs. Bambang Wijaya",
+    "role_or_company": "Pemilik Cafe Kopi Senja, Bandung",
+    "feedback": "Pesan 12 set meja kursi cafe di Mebel Jaya Abadi. Pengiriman tepat waktu dan kayunya benar-benar jati tua solid. Sangat puas!",
+    "rating": 5,
+    "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150\u0026auto=format\u0026fit=crop\u0026q=80",
+    "created_at": "2026-09-16T13:13:19.785356+07:00"
+  },
+  {
+    "id": "testi-002",
+    "website_id": "ws-mebeljaya-001",
+    "client_name": "Ibu Rini Kartika",
+    "role_or_company": "Residensial, Jakarta Selatan",
+    "feedback": "Sofa Scandinavian dan meja makannya sangat estetik di ruang tamu baru kami. Pelayanan konsultasi via WA ramah sekali.",
+    "rating": 5,
+    "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150\u0026auto=format\u0026fit=crop\u0026q=80",
+    "created_at": "2026-09-16T13:13:19.785356+07:00"
+  },
+  {
+    "id": "testi-suryo-001",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "client_name": "Dimas Pratama",
+    "role_or_company": "Pembeli Terverifikasi, Jakarta",
+    "feedback": "Kemeja flanel dan celana chino-nya pas banget di badan, bahannya adem dan jahitannya rapi banget. Pengiriman juga super cepat!",
+    "rating": 5,
+    "avatar_url": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150\u0026auto=format\u0026fit=crop\u0026q=80",
+    "created_at": "2026-09-16T15:55:00+07:00"
+  },
+  {
+    "id": "testi-suryo-002",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "client_name": "Siti Nurhaliza",
+    "role_or_company": "Pelanggan Setia, Surabaya",
+    "feedback": "Kaos dan kemejanya nyaman banget dipakai harian. Sablonan dan warnanya awet meski dicuci berkali-kali. Pelayanan via WA juga ramah!",
+    "rating": 5,
+    "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150\u0026auto=format\u0026fit=crop\u0026q=80",
+    "created_at": "2026-09-16T15:56:00+07:00"
+  }
+]

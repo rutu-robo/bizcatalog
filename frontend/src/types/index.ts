@@ -95,6 +95,8 @@ export interface SectionConfig {
   variant: string; // default, split, centered, grid, list, banner
   is_visible: boolean;
   order: number;
+  bg_color?: string;
+  bg_image_url?: string;
 }
 
 export interface Testimonial {

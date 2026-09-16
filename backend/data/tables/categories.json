@@ -1,0 +1,60 @@
+[
+  {
+    "id": "cat-2c4562de",
+    "website_id": "ws-mebeljaya-001",
+    "name": "Ruang Makan",
+    "slug": "ruang-makan",
+    "created_at": "2026-09-16T15:48:26.989465+07:00",
+    "updated_at": "2026-09-16T15:48:26.989465+07:00"
+  },
+  {
+    "id": "cat-9d3453c5",
+    "website_id": "ws-mebeljaya-001",
+    "name": "Ruang Tamu",
+    "slug": "ruang-tamu",
+    "created_at": "2026-09-16T15:48:26.989465+07:00",
+    "updated_at": "2026-09-16T15:48:26.989465+07:00"
+  },
+  {
+    "id": "cat-2ef8f979",
+    "website_id": "ws-mebeljaya-001",
+    "name": "Kamar Tidur",
+    "slug": "kamar-tidur",
+    "created_at": "2026-09-16T15:48:26.989465+07:00",
+    "updated_at": "2026-09-16T15:48:26.989465+07:00"
+  },
+  {
+    "id": "cat-ae5e4222",
+    "website_id": "ws-mebeljaya-001",
+    "name": "Ruang Kerja",
+    "slug": "ruang-kerja",
+    "created_at": "2026-09-16T15:48:26.989465+07:00",
+    "updated_at": "2026-09-16T15:48:26.989465+07:00"
+  },
+  {
+    "id": "cat-10bc4550",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "name": "Kaos",
+    "slug": "kaos",
+    "created_at": "2026-09-16T15:48:26.989465+07:00",
+    "updated_at": "2026-09-16T15:48:26.989465+07:00"
+  },
+  {
+    "id": "cat-b89c56b4",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "name": "Kemeja Flanel",
+    "slug": "kemeja-flanel",
+    "description": "Koleksi kemeja flanel pria dan wanita",
+    "created_at": "2026-09-16T15:51:28.186323+07:00",
+    "updated_at": "2026-09-16T15:51:28.186323+07:00"
+  },
+  {
+    "id": "cat-cc86381b",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "name": "Celana Panjang",
+    "slug": "celana-panjang",
+    "description": "Koleksi bawahan celana kasual dan formal",
+    "created_at": "2026-09-16T15:55:44.544627+07:00",
+    "updated_at": "2026-09-16T15:55:44.544627+07:00"
+  }
+]

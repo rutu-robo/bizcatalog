@@ -125,14 +125,16 @@ const (
 )
 
 type SectionConfig struct {
-	ID        string      `json:"id"`
-	WebsiteID string      `json:"website_id"`
-	Type      SectionType `json:"type"`
-	Title     string      `json:"title"`
-	Subtitle  string      `json:"subtitle"`
-	Variant   string      `json:"variant"` // default, split, centered, grid, list, banner
-	IsVisible bool        `json:"is_visible"`
-	Order     int         `json:"order"`
+	ID         string      `json:"id"`
+	WebsiteID  string      `json:"website_id"`
+	Type       SectionType `json:"type"`
+	Title      string      `json:"title"`
+	Subtitle   string      `json:"subtitle"`
+	Variant    string      `json:"variant"` // default, split, centered, grid, list, banner
+	IsVisible  bool        `json:"is_visible"`
+	Order      int         `json:"order"`
+	BgColor    string      `json:"bg_color,omitempty"`
+	BgImageURL string      `json:"bg_image_url,omitempty"`
 }
 
 type GalleryItem struct {

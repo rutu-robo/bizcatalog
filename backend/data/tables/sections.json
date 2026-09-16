@@ -1,0 +1,183 @@
+[
+  {
+    "id": "82d983c8-7a87-4586-8239-3c1b04430a9b",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "hero",
+    "title": "Koleksi Pakaian Trendy Terkini",
+    "subtitle": "Koleksi busana berkualitas premium dengan bahan nyaman dan desain kekinian.",
+    "variant": "split",
+    "is_visible": true,
+    "order": 1
+  },
+  {
+    "id": "sec-promo-suryo",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "promos",
+    "title": "Voucher Belanja \u0026 Promo Diskon",
+    "subtitle": "Klaim kupon potongan harga eksklusif sebelum periode promo berakhir!",
+    "variant": "full-banner",
+    "is_visible": true,
+    "order": 2
+  },
+  {
+    "id": "sec-cat-suryo",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "categories",
+    "title": "Kategori Busana Pilihan",
+    "subtitle": "Jelajahi koleksi busana berdasarkan kategori favorit Anda.",
+    "variant": "box-cards",
+    "is_visible": true,
+    "order": 3
+  },
+  {
+    "id": "3aba120d-e39e-411c-a246-5d2c7b6127ce",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "catalog",
+    "title": "Katalog Produk Pilihan",
+    "subtitle": "Pilihan produk pakaian berkualitas siap melengkapi gaya harian Anda.",
+    "variant": "overlay-badge",
+    "is_visible": true,
+    "order": 4
+  },
+  {
+    "id": "e820522f-37ef-4721-9f00-aa80bb610cdb",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "about",
+    "title": "Tentang Usaha Kami",
+    "subtitle": "Berpengalaman melayani pesanan pakaian kasual dan formal dengan standar jahitan tinggi.",
+    "variant": "minimal-accent",
+    "is_visible": true,
+    "order": 5
+  },
+  {
+    "id": "3f9b4033-f1da-4575-96b8-e2942ccc3fb0",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "gallery",
+    "title": "Galeri Workshop \u0026 Produksi",
+    "subtitle": "Dokumentasi proses produksi dan pengiriman pesanan pakaian pelanggan.",
+    "variant": "grid",
+    "is_visible": true,
+    "order": 6
+  },
+  {
+    "id": "c52ade9d-905f-4005-8cd7-eb0ea7e9c025",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "testimonials",
+    "title": "Apa Kata Pelanggan Kami?",
+    "subtitle": "Kepuasan dan kenyamanan berpakaian pelanggan adalah kebanggaan kami.",
+    "variant": "slider-carousel",
+    "is_visible": true,
+    "order": 7
+  },
+  {
+    "id": "54867be0-f310-4fe3-8a96-50ddbdb2fa7d",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "contact",
+    "title": "Hubungi Kami",
+    "subtitle": "Konsultasikan kebutuhan pesanan pakaian Anda langsung via WhatsApp.",
+    "variant": "default",
+    "is_visible": true,
+    "order": 8
+  },
+  {
+    "id": "23e51401-f696-41a5-b568-3931381a85e2",
+    "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
+    "type": "footer",
+    "title": "",
+    "subtitle": "",
+    "variant": "compact-bar",
+    "is_visible": true,
+    "order": 9
+  },
+  {
+    "id": "60d9f727-f4a4-4e6e-92dd-874e3f80175a",
+    "website_id": "ws-mebeljaya-001",
+    "type": "hero",
+    "title": "Koleksi Mebel Kayu Jati Terbaik",
+    "subtitle": "Dikerjakan langsung oleh pengrajin ahli dari Jepara dengan kualitas ekspor.",
+    "variant": "card-rounded",
+    "is_visible": true,
+    "order": 1,
+    "bg_color": "#ffd6ee"
+  },
+  {
+    "id": "1c7399a8-a6dd-4918-b60c-5c90fb09c951",
+    "website_id": "ws-mebeljaya-001",
+    "type": "promos",
+    "title": "Promo Spesial Diskon \u0026 Kupon Belanja",
+    "subtitle": "Klaim voucher kupon diskon eksklusif untuk hemat lebih banyak hari ini!",
+    "variant": "coupon-ticket",
+    "is_visible": true,
+    "order": 2
+  },
+  {
+    "id": "8f28e961-dc99-4350-8696-ce581e7878b2",
+    "website_id": "ws-mebeljaya-001",
+    "type": "categories",
+    "title": "Kategori Pilihan",
+    "subtitle": "Pilih kategori untuk memfilter koleksi produk favorit Anda.",
+    "variant": "circle-avatar",
+    "is_visible": true,
+    "order": 3
+  },
+  {
+    "id": "94de0797-215d-4b91-877b-dae63abbae14",
+    "website_id": "ws-mebeljaya-001",
+    "type": "catalog",
+    "title": "Katalog Produk Unggulan",
+    "subtitle": "Pilihan produk berkualitas tinggi yang siap mempercantik ruangan Anda.",
+    "variant": "minimal-frameless",
+    "is_visible": true,
+    "order": 4
+  },
+  {
+    "id": "ea97c743-8dca-4a0d-a968-e6c457acb4fd",
+    "website_id": "ws-mebeljaya-001",
+    "type": "about",
+    "title": "Tentang Usaha Kami",
+    "subtitle": "Berpengalaman lebih dari 15 tahun melayani pesanan furnitur rumah tangga, cafe, dan kantor di seluruh Indonesia.",
+    "variant": "split",
+    "is_visible": true,
+    "order": 5
+  },
+  {
+    "id": "6bec876c-df98-4e31-a848-bd835c3d90b1",
+    "website_id": "ws-mebeljaya-001",
+    "type": "gallery",
+    "title": "Galeri Workshop \u0026 Pengiriman",
+    "subtitle": "Dokumentasi proses produksi dan pengiriman pesanan pelanggan.",
+    "variant": "grid",
+    "is_visible": true,
+    "order": 6
+  },
+  {
+    "id": "e2f01ab9-76fd-4371-affa-1d79310a684b",
+    "website_id": "ws-mebeljaya-001",
+    "type": "testimonials",
+    "title": "Apa Kata Pelanggan Kami?",
+    "subtitle": "Kepuasan pelanggan adalah prioritas utama setiap karya kami.",
+    "variant": "grid-cards",
+    "is_visible": true,
+    "order": 7
+  },
+  {
+    "id": "1b709314-ed2e-41ad-87e1-0726f0ec1790",
+    "website_id": "ws-mebeljaya-001",
+    "type": "contact",
+    "title": "Hubungi Kami Langsung",
+    "subtitle": "Konsultasikan kebutuhan perabot Anda langsung via WhatsApp.",
+    "variant": "default",
+    "is_visible": true,
+    "order": 8
+  },
+  {
+    "id": "642c33e9-2874-46e1-9da6-11cbe8b6a62f",
+    "website_id": "ws-mebeljaya-001",
+    "type": "footer",
+    "title": "",
+    "subtitle": "",
+    "variant": "multi-column",
+    "is_visible": true,
+    "order": 9
+  }
+]
