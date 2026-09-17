@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS sections (
     variant VARCHAR(50) NOT NULL DEFAULT 'default',
     bg_color VARCHAR(50) DEFAULT '',
     bg_image_url TEXT DEFAULT '',
+    text_align VARCHAR(20) DEFAULT 'left',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_section_website FOREIGN KEY (website_id) REFERENCES websites(id) ON DELETE CASCADE,

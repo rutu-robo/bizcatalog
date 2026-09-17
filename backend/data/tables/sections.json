@@ -95,20 +95,10 @@
     "type": "hero",
     "title": "Koleksi Mebel Kayu Jati Terbaik",
     "subtitle": "Dikerjakan langsung oleh pengrajin ahli dari Jepara dengan kualitas ekspor.",
-    "variant": "card-rounded",
+    "variant": "bg-full",
     "is_visible": true,
     "order": 1,
-    "bg_color": "#ffd6ee"
-  },
-  {
-    "id": "1c7399a8-a6dd-4918-b60c-5c90fb09c951",
-    "website_id": "ws-mebeljaya-001",
-    "type": "promos",
-    "title": "Promo Spesial Diskon \u0026 Kupon Belanja",
-    "subtitle": "Klaim voucher kupon diskon eksklusif untuk hemat lebih banyak hari ini!",
-    "variant": "coupon-ticket",
-    "is_visible": true,
-    "order": 2
+    "text_align": "left"
   },
   {
     "id": "8f28e961-dc99-4350-8696-ce581e7878b2",
@@ -116,9 +106,10 @@
     "type": "categories",
     "title": "Kategori Pilihan",
     "subtitle": "Pilih kategori untuk memfilter koleksi produk favorit Anda.",
-    "variant": "circle-avatar",
+    "variant": "pill-badges",
     "is_visible": true,
-    "order": 3
+    "order": 2,
+    "text_align": "center"
   },
   {
     "id": "94de0797-215d-4b91-877b-dae63abbae14",
@@ -126,9 +117,21 @@
     "type": "catalog",
     "title": "Katalog Produk Unggulan",
     "subtitle": "Pilihan produk berkualitas tinggi yang siap mempercantik ruangan Anda.",
-    "variant": "minimal-frameless",
+    "variant": "overlay-badge",
     "is_visible": true,
-    "order": 4
+    "order": 3,
+    "text_align": "right"
+  },
+  {
+    "id": "1c7399a8-a6dd-4918-b60c-5c90fb09c951",
+    "website_id": "ws-mebeljaya-001",
+    "type": "promos",
+    "title": "Promo Spesial Diskon \u0026 Kupon Belanja",
+    "subtitle": "Klaim voucher kupon diskon eksklusif untuk hemat lebih banyak hari ini!",
+    "variant": "full-banner",
+    "is_visible": true,
+    "order": 4,
+    "bg_color": "#1e1b4b"
   },
   {
     "id": "ea97c743-8dca-4a0d-a968-e6c457acb4fd",
@@ -166,7 +169,7 @@
     "type": "contact",
     "title": "Hubungi Kami Langsung",
     "subtitle": "Konsultasikan kebutuhan perabot Anda langsung via WhatsApp.",
-    "variant": "default",
+    "variant": "compact",
     "is_visible": true,
     "order": 8
   },

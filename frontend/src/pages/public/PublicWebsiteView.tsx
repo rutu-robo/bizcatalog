@@ -38,6 +38,175 @@ import { InstagramIcon, FacebookIcon } from '../../components/Icons';
 import { useCartStore } from '../../store/cartStore';
 import { CartDrawer } from '../../components/cart/CartDrawer';
 
+const isColorDark = (hex?: string): boolean => {
+  if (!hex) return false;
+  const cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+  }
+  if (cleanHex.length === 6) {
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+  }
+  return false;
+};
+
+interface CategoryScrollContainerProps {
+  children: React.ReactNode;
+  className?: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+const CategoryScrollContainer: React.FC<CategoryScrollContainerProps> = ({ children, className = '', align = 'left' }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = React.useState(false);
+  const [showRightArrow, setShowRightArrow] = React.useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const canScrollLeft = el.scrollLeft > 10;
+    const canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth - 10;
+    setShowLeftArrow(canScrollLeft);
+    setShowRightArrow(canScrollRight);
+  }, []);
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    return () => {
+      window.removeEventListener('resize', checkScroll);
+      el.removeEventListener('scroll', checkScroll);
+    };
+  }, [checkScroll]);
+
+  // Mouse Drag to Swipe support on desktop
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let hasMoved = false;
+
+    const onMouseDown = (e: MouseEvent) => {
+      isDown = true;
+      hasMoved = false;
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX);
+      if (Math.abs(walk) > 4) {
+        hasMoved = true;
+        el.style.cursor = 'grabbing';
+      }
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+    const onMouseUp = () => {
+      if (hasMoved) {
+        const captureClick = (clickEvent: MouseEvent) => {
+          clickEvent.stopPropagation();
+          clickEvent.preventDefault();
+          window.removeEventListener('click', captureClick, true);
+        };
+        window.addEventListener('click', captureClick, true);
+      }
+      isDown = false;
+      hasMoved = false;
+      if (el) el.style.cursor = 'grab';
+    };
+
+    const onMouseLeave = () => {
+      isDown = false;
+      hasMoved = false;
+      if (el) el.style.cursor = 'grab';
+    };
+
+    el.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    el.addEventListener('mouseleave', onMouseLeave);
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      el.removeEventListener('mouseleave', onMouseLeave);
+    };
+  }, []);
+
+  const scrollBy = (offset: number) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="relative group/catscroll">
+      {/* Subtle left gradient mask when scrolled */}
+      {showLeftArrow && (
+        <div className="hidden sm:block absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none" />
+      )}
+
+      {/* Left scroll navigation arrow */}
+      {showLeftArrow && (
+        <button
+          type="button"
+          onClick={() => scrollBy(-260)}
+          aria-label="Scroll ke kiri"
+          className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3.5 z-20 w-8 h-8 rounded-full bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 items-center justify-center text-slate-700 hover:text-blue-600 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/catscroll:opacity-100"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* Main Horizontal Swipeable Container */}
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto no-scrollbar scroll-smooth overscroll-x-contain touch-pan-x cursor-grab active:cursor-grabbing select-none sm:select-auto"
+      >
+        <div
+          className={`flex items-center flex-nowrap min-w-full w-max ${
+            align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'
+          } ${className}`}
+        >
+          {children}
+        </div>
+      </div>
+
+      {/* Subtle right gradient mask when overflowed */}
+      {showRightArrow && (
+        <div className="hidden sm:block absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none" />
+      )}
+
+      {/* Right scroll navigation arrow */}
+      {showRightArrow && (
+        <button
+          type="button"
+          onClick={() => scrollBy(260)}
+          aria-label="Scroll ke kanan"
+          className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-3.5 z-20 w-8 h-8 rounded-full bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 items-center justify-center text-slate-700 hover:text-blue-600 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/catscroll:opacity-100"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const PublicWebsiteView: React.FC = () => {
   const params = useParams<{ subdomain?: string }>();
   
@@ -204,29 +373,37 @@ export const PublicWebsiteView: React.FC = () => {
           <img
             src={website.logo_url}
             alt={website.business_name}
-            className={`object-cover border border-slate-200/50 ${isFloating ? 'w-9 h-9 rounded-full' : 'w-9 h-9 rounded-lg'}`}
+            className={`object-cover ${
+              isFloating
+                ? 'w-10 h-10 rounded-full ring-2 ring-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                : 'w-9 h-9 rounded-lg border border-slate-200/50'
+            }`}
           />
         )}
         <div>
-          <span className={`text-lg ${theme.headingClass}`}>
+          <span className={`text-base sm:text-lg ${theme.headingClass} font-black tracking-tight text-slate-900 drop-shadow-2xs`}>
             {website.business_name}
           </span>
         </div>
       </div>
 
-      <nav className="hidden md:flex items-center gap-6 text-xs font-semibold">
-        <a href="#katalog" className="hover:opacity-80 transition-opacity">Katalog</a>
-        <a href="#promo" className="hover:opacity-80 transition-opacity">Promo</a>
-        <a href="#tentang" className="hover:opacity-80 transition-opacity">Tentang</a>
-        {galleries.length > 0 && <a href="#galeri" className="hover:opacity-80 transition-opacity">Galeri</a>}
-        {testimonials.length > 0 && <a href="#testimoni" className="hover:opacity-80 transition-opacity">Testimoni</a>}
-        <a href="#kontak" className="hover:opacity-80 transition-opacity">Kontak</a>
+      <nav className={`hidden md:flex items-center gap-1 text-xs font-semibold ${isFloating ? 'text-slate-700' : 'gap-6'}`}>
+        <a href="#katalog" className={`${isFloating ? 'px-3.5 py-1.5 rounded-full hover:bg-white/60 hover:text-slate-950 transition-all' : 'hover:opacity-80 transition-opacity'}`}>Katalog</a>
+        <a href="#promo" className={`${isFloating ? 'px-3.5 py-1.5 rounded-full hover:bg-white/60 hover:text-slate-950 transition-all' : 'hover:opacity-80 transition-opacity'}`}>Promo</a>
+        <a href="#tentang" className={`${isFloating ? 'px-3.5 py-1.5 rounded-full hover:bg-white/60 hover:text-slate-950 transition-all' : 'hover:opacity-80 transition-opacity'}`}>Tentang</a>
+        {galleries.length > 0 && <a href="#galeri" className={`${isFloating ? 'px-3.5 py-1.5 rounded-full hover:bg-white/60 hover:text-slate-950 transition-all' : 'hover:opacity-80 transition-opacity'}`}>Galeri</a>}
+        {testimonials.length > 0 && <a href="#testimoni" className={`${isFloating ? 'px-3.5 py-1.5 rounded-full hover:bg-white/60 hover:text-slate-950 transition-all' : 'hover:opacity-80 transition-opacity'}`}>Testimoni</a>}
+        <a href="#kontak" className={`${isFloating ? 'px-3.5 py-1.5 rounded-full hover:bg-white/60 hover:text-slate-950 transition-all' : 'hover:opacity-80 transition-opacity'}`}>Kontak</a>
       </nav>
 
       <div className="flex items-center gap-2">
         <button
           onClick={() => setIsTrackModalOpen(true)}
-          className={`p-2 bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/70 text-slate-800 transition-all flex items-center gap-1.5 text-xs font-bold shadow-2xs ${isFloating ? 'rounded-full px-3' : 'rounded-xl'}`}
+          className={`transition-all flex items-center gap-1.5 text-xs font-bold ${
+            isFloating
+              ? 'bg-white/60 hover:bg-white/95 backdrop-blur-md border border-white/80 text-slate-800 rounded-full px-3.5 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.9)] hover:scale-105 active:scale-95'
+              : 'p-2 bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/70 text-slate-800 rounded-xl shadow-2xs'
+          }`}
           title="Lacak Status Pesanan"
         >
           <Truck className="w-4 h-4 text-indigo-600" />
@@ -235,13 +412,17 @@ export const PublicWebsiteView: React.FC = () => {
 
         <button
           onClick={() => setIsOpen(true)}
-          className={`relative p-2 bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/70 text-slate-800 transition-all flex items-center gap-1.5 text-xs font-bold shadow-2xs ${isFloating ? 'rounded-full px-3' : 'rounded-xl'}`}
+          className={`relative transition-all flex items-center gap-1.5 text-xs font-bold ${
+            isFloating
+              ? 'bg-white/60 hover:bg-white/95 backdrop-blur-md border border-white/80 text-slate-800 rounded-full px-3.5 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.9)] hover:scale-105 active:scale-95'
+              : 'p-2 bg-white/80 backdrop-blur-md hover:bg-white border border-slate-200/70 text-slate-800 rounded-xl shadow-2xs'
+          }`}
           title="Buka Keranjang Belanja"
         >
           <ShoppingBag className="w-4 h-4 text-blue-600" />
           <span className="hidden sm:inline">Keranjang</span>
           {totalCount > 0 && (
-            <span className="bg-blue-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shadow">
+            <span className="bg-blue-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shadow-xs">
               {totalCount}
             </span>
           )}
@@ -251,9 +432,13 @@ export const PublicWebsiteView: React.FC = () => {
           href={createWhatsAppLink()}
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-flex items-center gap-2 ${theme.buttonPrimary} text-xs py-2 px-4 shadow-sm ${isFloating ? 'rounded-full' : ''}`}
+          className={`inline-flex items-center gap-2 text-xs font-bold transition-all ${
+            isFloating
+              ? 'bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full px-4 py-2 shadow-[0_4px_16px_rgba(37,99,235,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] hover:scale-105 active:scale-95'
+              : `${theme.buttonPrimary} py-2 px-4 shadow-sm rounded-xl`
+          }`}
         >
-          <MessageCircle className="w-3.5 h-3.5" />
+          <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
           <span>Chat CS</span>
         </a>
       </div>
@@ -266,11 +451,11 @@ export const PublicWebsiteView: React.FC = () => {
       {(() => {
         const headerStyle = website.header_style || 'dynamic-scroll';
 
-        // 1. FLOATING ISLAND (Melayang / Mengambang)
+        // 1. FLOATING ISLAND (Apple Liquid Glass Melayang)
         if (headerStyle === 'floating') {
           return (
             <div className="fixed top-3 sm:top-4 left-0 right-0 z-40 max-w-6xl mx-auto px-4 sm:px-6 pointer-events-none transition-all duration-300">
-              <header className="pointer-events-auto rounded-2xl sm:rounded-full backdrop-blur-xl backdrop-saturate-150 bg-white/85 shadow-xl border border-white/60 px-4 sm:px-6 h-16 flex items-center justify-between transition-all">
+              <header className="pointer-events-auto rounded-3xl sm:rounded-full backdrop-blur-2xl backdrop-saturate-[190%] bg-gradient-to-b from-white/75 via-white/55 to-white/45 shadow-[0_20px_50px_rgba(0,0,0,0.14),0_1px_2px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.9),inset_0_-1px_1px_rgba(255,255,255,0.2)] border border-white/60 px-4 sm:px-6 h-16 sm:h-[68px] flex items-center justify-between transition-all duration-300 hover:shadow-[0_25px_60px_rgba(0,0,0,0.18),inset_0_1px_1px_rgba(255,255,255,0.95)]">
                 {renderHeaderContent(true)}
               </header>
             </div>
@@ -325,6 +510,10 @@ export const PublicWebsiteView: React.FC = () => {
                   ? 'pt-28 sm:pt-36 pb-20 sm:pb-28'
                   : 'py-20 sm:py-28';
 
+                const textAlign = sec.text_align || 'center';
+                const isLeft = textAlign === 'left';
+                const isRight = textAlign === 'right';
+
                 return (
                   <section
                     key={sec.id}
@@ -337,24 +526,40 @@ export const PublicWebsiteView: React.FC = () => {
                         alt="Hero Background"
                         className="w-full h-full object-cover filter brightness-[0.4]"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" />
+                      <div className={`absolute inset-0 ${
+                        isLeft
+                          ? 'bg-gradient-to-r from-slate-950/95 via-slate-950/75 to-slate-950/40'
+                          : isRight
+                          ? 'bg-gradient-to-l from-slate-950/95 via-slate-950/75 to-slate-950/40'
+                          : 'bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40'
+                      }`} />
                     </div>
 
-                    <div className={`relative z-10 max-w-4xl mx-auto px-4 sm:px-6 ${contentPadding} text-center space-y-6`}>
+                    <div className={`relative z-10 max-w-5xl mx-auto px-4 sm:px-6 ${contentPadding} w-full ${
+                      isLeft
+                        ? 'text-left flex flex-col items-start'
+                        : isRight
+                        ? 'text-right flex flex-col items-end'
+                        : 'text-center flex flex-col items-center'
+                    } space-y-6`}>
                       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold tracking-wide backdrop-blur-md">
                         <Sparkles className="w-3.5 h-3.5 text-blue-300" />
                         <span>{website.tagline || 'Toko Resmi Terpercaya'}</span>
                       </div>
 
-                      <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.15] text-white drop-shadow-md">
+                      <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.15] text-white drop-shadow-md max-w-3xl">
                         {sec.title || website.business_name}
                       </h1>
 
-                      <p className="text-base sm:text-lg text-slate-200 leading-relaxed max-w-2xl mx-auto">
+                      <p className={`text-base sm:text-lg text-slate-200 leading-relaxed max-w-2xl ${
+                        isLeft ? 'mr-auto' : isRight ? 'ml-auto' : 'mx-auto'
+                      }`}>
                         {sec.subtitle || website.description}
                       </p>
 
-                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                      <div className={`flex flex-wrap items-center gap-3 pt-2 w-full ${
+                        isLeft ? 'justify-start' : isRight ? 'justify-end' : 'justify-center'
+                      }`}>
                         <a
                           href="#katalog"
                           className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all"
@@ -373,7 +578,9 @@ export const PublicWebsiteView: React.FC = () => {
                         </a>
                       </div>
 
-                      <div className="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-slate-300">
+                      <div className={`pt-6 flex flex-wrap items-center gap-6 sm:gap-10 text-xs text-slate-300 w-full ${
+                        isLeft ? 'justify-start' : isRight ? 'justify-end' : 'justify-center'
+                      }`}>
                         <div className="flex items-center gap-2">
                           <ShieldCheck className="w-4 h-4 text-emerald-400" />
                           <span>100% Kualitas Terjamin</span>
@@ -397,6 +604,8 @@ export const PublicWebsiteView: React.FC = () => {
                   ? 'pt-24 sm:pt-28 pb-8 sm:pb-12'
                   : 'py-8 sm:py-12';
 
+                const isRight = sec.text_align === 'right';
+
                 return (
                   <section
                     key={sec.id}
@@ -404,17 +613,25 @@ export const PublicWebsiteView: React.FC = () => {
                     className={`${sectionPadding} border-b ${theme.borderClass}`}
                   >
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                      <div className="relative rounded-3xl sm:rounded-[2.5rem] overflow-hidden min-h-[460px] shadow-2xl flex items-center">
+                      <div className={`relative rounded-3xl sm:rounded-[2.5rem] overflow-hidden min-h-[460px] shadow-2xl flex items-center ${
+                        isRight ? 'justify-end' : 'justify-start'
+                      }`}>
                         <div className="absolute inset-0 z-0">
                           <img
                             src={heroImage}
                             alt="Hero Card"
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/75 to-slate-900/30" />
+                          <div className={`absolute inset-0 ${
+                            isRight
+                              ? 'bg-gradient-to-l from-slate-950/95 via-slate-950/75 to-slate-900/30'
+                              : 'bg-gradient-to-r from-slate-950/95 via-slate-950/75 to-slate-900/30'
+                          }`} />
                         </div>
 
-                        <div className="relative z-10 p-8 sm:p-14 max-w-2xl text-white space-y-5">
+                        <div className={`relative z-10 p-8 sm:p-14 max-w-2xl text-white space-y-5 ${
+                          isRight ? 'text-right flex flex-col items-end' : 'text-left'
+                        }`}>
                           <span className="inline-block text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white">
                             {website.tagline || 'Katalog Pilihan'}
                           </span>
@@ -424,7 +641,7 @@ export const PublicWebsiteView: React.FC = () => {
                           <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
                             {sec.subtitle || website.description}
                           </p>
-                          <div className="flex flex-wrap gap-3 pt-2">
+                          <div className={`flex flex-wrap gap-3 pt-2 ${isRight ? 'justify-end' : 'justify-start'}`}>
                             <a
                               href="#katalog"
                               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-lg hover:scale-105 transition-all"
@@ -450,14 +667,9 @@ export const PublicWebsiteView: React.FC = () => {
               }
 
               // Default: 'split'
-              const isDarkBg = sec.bg_color && (
-                sec.bg_color === '#0f172a' ||
-                sec.bg_color === '#1e1b4b' ||
-                sec.bg_color === '#064e3b' ||
-                sec.bg_color.startsWith('#0') ||
-                sec.bg_color.startsWith('#1') ||
-                sec.bg_color.startsWith('#2')
-              );
+              const isDarkBg = isColorDark(sec.bg_color);
+
+              const isRight = sec.text_align === 'right';
 
               const sectionPadding = isOverlayHeader && isFirstSection
                 ? 'pt-24 sm:pt-28 pb-14 sm:pb-20'
@@ -471,7 +683,7 @@ export const PublicWebsiteView: React.FC = () => {
                 >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10 sm:gap-14 items-center">
-                    <div className="space-y-5">
+                    <div className={`space-y-5 ${isRight ? 'md:order-2' : 'md:order-1'}`}>
                       <span className={theme.badgeClass}>
                         {website.tagline || 'Katalog Resmi'}
                       </span>
@@ -512,7 +724,9 @@ export const PublicWebsiteView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="relative aspect-4/3 rounded-3xl overflow-hidden shadow-2xl border border-slate-200/50 group">
+                    <div className={`relative aspect-4/3 rounded-3xl overflow-hidden shadow-2xl border border-slate-200/50 group ${
+                      isRight ? 'md:order-1' : 'md:order-2'
+                    }`}>
                       <img
                         src={heroImage}
                         alt="Hero Showcase"
@@ -546,18 +760,18 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'full-banner') {
               return (
-                <section id="promo" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-10' : 'py-10'} border-b border-slate-200/60`}>
+                <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b border-slate-200/60`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 rounded-3xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-                      <div className="space-y-4 max-w-xl text-center md:text-left">
+                    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 rounded-3xl p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="space-y-3 max-w-xl text-center md:text-left">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
                           <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
                           <span>Flash Sale E-Commerce Hari Ini</span>
                         </div>
-                        <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
                           {sec.title || 'Diskon Kilat Terbatas!'}
                         </h2>
-                        <p className="text-rose-100 text-sm sm:text-base leading-relaxed">
+                        <p className="text-rose-100 text-xs sm:text-sm leading-relaxed mt-1">
                           {sec.subtitle || 'Dapatkan potongan harga spesial dan penawaran terbaik hari ini sebelum waktu promo habis.'}
                         </p>
                       </div>
@@ -584,7 +798,7 @@ export const PublicWebsiteView: React.FC = () => {
                         </div>
                         <a
                           href="#katalog"
-                          className="w-full text-center px-6 py-3 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm shadow-xl transition-transform hover:scale-105"
+                          className="w-full text-center px-6 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm shadow-xl transition-transform hover:scale-105"
                         >
                           Serbu Promo Sekarang
                         </a>
@@ -596,25 +810,26 @@ export const PublicWebsiteView: React.FC = () => {
             }
 
             if (sec.variant === 'split-card') {
+              const isDarkBg = isColorDark(sec.bg_color);
               return (
-                <section id="promo" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-12 sm:pb-16' : 'py-12 sm:py-16'} border-b ${theme.borderClass}`}>
+                <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${theme.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white p-8 sm:p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
-                      <div className="space-y-4 max-w-xl">
+                    <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="space-y-3 max-w-xl">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
                           <BadgePercent className="w-3.5 h-3.5" />
                           <span>Penawaran Terbatas</span>
                         </span>
-                        <h2 className={`text-2xl sm:text-4xl ${theme.headingClass} font-extrabold`}>
+                        <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
                           {sec.title || 'Hemat Belanja dengan Voucher Eksklusif'}
                         </h2>
-                        <p className={`text-xs sm:text-sm ${theme.textClass} leading-relaxed`}>
+                        <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1 leading-relaxed`}>
                           {sec.subtitle || 'Pilih produk favorit Anda, masukkan ke keranjang belanja, dan gunakan voucher diskon saat checkout untuk harga paling hemat!'}
                         </p>
                         <div className="pt-2">
                           <a
                             href="#katalog"
-                            className={`${theme.buttonPrimary} inline-flex items-center gap-2 text-xs px-5 py-2.5 shadow-sm`}
+                            className={`${theme.buttonPrimary} inline-flex items-center gap-2 text-xs px-5 py-2 shadow-sm`}
                           >
                             <span>Lihat Produk Promo</span>
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -622,11 +837,11 @@ export const PublicWebsiteView: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex-shrink-0 text-center p-8 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl min-w-[240px]">
+                      <div className="flex-shrink-0 text-center p-6 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl min-w-[220px]">
                         <span className="text-xs uppercase font-bold tracking-widest text-blue-200 block">Potongan Hingga</span>
-                        <span className="text-5xl font-black block my-1">30%</span>
+                        <span className="text-4xl font-black block my-1">30%</span>
                         <span className="text-xs text-blue-100 block">Semua Produk Unggulan</span>
-                        <div className="mt-4 pt-4 border-t border-white/20 text-[11px] text-blue-200">
+                        <div className="mt-3 pt-3 border-t border-white/20 text-[11px] text-blue-200">
                           Gunakan kode: <span className="font-mono font-bold text-white bg-white/20 px-2 py-0.5 rounded">HEMAT10</span>
                         </div>
                       </div>
@@ -637,18 +852,19 @@ export const PublicWebsiteView: React.FC = () => {
             }
 
             // Default: 'coupon-ticket'
+            const isDarkBg = isColorDark(sec.bg_color);
             return (
-              <section id="promo" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-12 sm:pb-16' : 'py-12 sm:py-16'} border-b ${theme.borderClass}`}>
+              <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="text-center max-w-2xl mx-auto mb-8">
+                  <div className="text-center max-w-2xl mx-auto mb-6">
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-3 py-1 rounded-full mb-2">
                       <Tag className="w-3.5 h-3.5" />
                       <span>Kupon & Voucher Belanja</span>
                     </span>
-                    <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold`}>
+                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
                       {sec.title || 'Klaim Voucher Diskon Hari Ini'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} mt-1.5`}>
+                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
                       {sec.subtitle || 'Salin kode voucher di bawah dan nikmati potongan harga langsung saat Anda melakukan pemesanan.'}
                     </p>
                   </div>
@@ -709,44 +925,100 @@ export const PublicWebsiteView: React.FC = () => {
           case 'categories': {
             if (categories.length === 0) return null;
 
+            const textAlign = sec.text_align || 'left';
+            const isDarkBg = isColorDark(sec.bg_color);
+
             return (
-              <section id="kategori" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-12' : 'py-8 sm:py-12'} border-b ${theme.borderClass}`}>
+              <section id="kategori" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-20 sm:pt-24 pb-6 sm:pb-7' : 'py-6 sm:py-7'} border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-bold`}>
+                  
+                  {/* Title & Subtitle with Alignment Controls */}
+                  {textAlign === 'center' ? (
+                    <div className="relative mb-4 sm:mb-5 text-center">
+                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
                         {sec.title || 'Kategori Pilihan'}
                       </h2>
-                      <p className={`text-xs ${theme.textClass} mt-0.5`}>
-                        {sec.subtitle || 'Pilih kategori untuk memfilter katalog produk di bawah.'}
-                      </p>
+                      {sec.subtitle && (
+                        <p className={`text-xs sm:text-sm ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} font-normal mt-1 max-w-xl mx-auto`}>
+                          {sec.subtitle}
+                        </p>
+                      )}
+                      {activeCategory !== 'all' && (
+                        <div className="mt-2 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2 sm:mt-0">
+                          <button
+                            onClick={() => setActiveCategory('all')}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 mx-auto sm:mx-0"
+                          >
+                            <span>Tampilkan Semua</span>
+                            <span className="text-sm leading-none">×</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    {activeCategory !== 'all' && (
-                      <button
-                        onClick={() => setActiveCategory('all')}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
-                      >
-                        Reset Filter
-                      </button>
-                    )}
-                  </div>
+                  ) : textAlign === 'right' ? (
+                    <div className="flex items-center justify-between mb-4 sm:mb-5 gap-3">
+                      {activeCategory !== 'all' ? (
+                        <button
+                          onClick={() => setActiveCategory('all')}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 flex-shrink-0"
+                        >
+                          <span>Tampilkan Semua</span>
+                          <span className="text-sm leading-none">×</span>
+                        </button>
+                      ) : <div />}
+                      <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5 text-right">
+                        {sec.subtitle && (
+                          <span className={`text-xs sm:text-sm ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} font-normal order-2 sm:order-1`}>
+                            {sec.subtitle}<span className="hidden sm:inline"> •</span>
+                          </span>
+                        )}
+                        <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} order-1 sm:order-2`}>
+                          {sec.title || 'Kategori Pilihan'}
+                        </h2>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between mb-4 sm:mb-5 gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5 text-left">
+                        <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                          {sec.title || 'Kategori Pilihan'}
+                        </h2>
+                        {sec.subtitle && (
+                          <span className={`text-xs sm:text-sm ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} font-normal`}>
+                            <span className="hidden sm:inline">• </span>{sec.subtitle}
+                          </span>
+                        )}
+                      </div>
+                      {activeCategory !== 'all' && (
+                        <button
+                          onClick={() => setActiveCategory('all')}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 flex-shrink-0"
+                        >
+                          <span>Tampilkan Semua</span>
+                          <span className="text-sm leading-none">×</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
 
-                  {/* 1 Row List with Variants */}
+                  {/* Horizontal Scrolling & Swipeable List with Variants */}
                   {sec.variant === 'pill-badges' ? (
-                    <div className="flex items-center gap-3 overflow-x-auto pb-3 no-scrollbar">
+                    <CategoryScrollContainer align={textAlign} className="gap-2.5 pb-1.5">
                       <button
                         onClick={() => {
                           setActiveCategory('all');
                           document.getElementById('katalog')?.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 flex-shrink-0 transition-all ${
+                        className={`px-4 py-2 rounded-full text-xs sm:text-[13px] font-semibold flex items-center gap-2 flex-shrink-0 transition-all ${
                           activeCategory === 'all'
-                            ? theme.buttonPrimary
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            ? `${theme.buttonPrimary} shadow-xs`
+                            : 'bg-slate-100/90 hover:bg-slate-200/90 text-slate-600 hover:text-slate-900 border border-slate-200/60'
                         }`}
                       >
-                        <span>Semua Produk</span>
-                        <span className="px-2 py-0.5 rounded-full bg-white/30 text-[10px]">{products.length}</span>
+                        <span>Semua</span>
+                        <span className="px-2 py-0.5 rounded-full bg-white/30 text-[11px] font-bold">
+                          {products.length}
+                        </span>
                       </button>
                       {categoryObjects.map((cat) => {
                         const count = products.filter(p => p.category === cat.name).length;
@@ -758,36 +1030,40 @@ export const PublicWebsiteView: React.FC = () => {
                               setActiveCategory(cat.name);
                               document.getElementById('katalog')?.scrollIntoView({ behavior: 'smooth' });
                             }}
-                            className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 flex-shrink-0 transition-all ${
+                            className={`px-4 py-2 rounded-full text-xs sm:text-[13px] font-semibold flex items-center gap-2 flex-shrink-0 transition-all ${
                               isActive
-                                ? theme.buttonPrimary
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                ? `${theme.buttonPrimary} shadow-xs`
+                                : 'bg-slate-100/90 hover:bg-slate-200/90 text-slate-600 hover:text-slate-900 border border-slate-200/60'
                             }`}
                           >
                             <span>{cat.name}</span>
-                            <span className="px-2 py-0.5 rounded-full bg-black/10 text-[10px]">{count}</span>
+                            <span className="px-2 py-0.5 rounded-full bg-black/5 text-[11px] text-slate-500 font-bold">
+                              {count}
+                            </span>
                           </button>
                         );
                       })}
-                    </div>
+                    </CategoryScrollContainer>
                   ) : sec.variant === 'box-cards' ? (
-                    <div className="flex items-center gap-4 overflow-x-auto pb-3 no-scrollbar">
+                    <CategoryScrollContainer align={textAlign} className="gap-3 pb-1.5">
                       <div
                         onClick={() => {
                           setActiveCategory('all');
                           document.getElementById('katalog')?.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className={`min-w-[150px] p-4 rounded-2xl border cursor-pointer flex-shrink-0 transition-all ${
+                        className={`px-3.5 py-2.5 rounded-xl border cursor-pointer flex items-center gap-3 flex-shrink-0 transition-all ${
                           activeCategory === 'all'
-                            ? 'border-blue-600 bg-blue-50/70 shadow-sm'
-                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                            ? 'border-blue-600 bg-blue-50/80 shadow-2xs'
+                            : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/50'
                         }`}
                       >
-                        <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-2 font-black text-sm">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xs flex-shrink-0">
                           ALL
                         </div>
-                        <h4 className="font-bold text-xs text-slate-900 truncate">Semua Produk</h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{products.length} Barang</p>
+                        <div className="text-left">
+                          <div className="text-xs sm:text-sm font-bold text-slate-800 leading-tight">Semua</div>
+                          <div className="text-[11px] text-slate-400 leading-none mt-0.5">{products.length} produk</div>
+                        </div>
                       </div>
 
                       {categoryObjects.map((cat) => {
@@ -801,30 +1077,30 @@ export const PublicWebsiteView: React.FC = () => {
                               setActiveCategory(cat.name);
                               document.getElementById('katalog')?.scrollIntoView({ behavior: 'smooth' });
                             }}
-                            className={`min-w-[160px] p-4 rounded-2xl border cursor-pointer flex-shrink-0 transition-all ${
+                            className={`px-3.5 py-2.5 rounded-xl border cursor-pointer flex items-center gap-3 flex-shrink-0 transition-all ${
                               isActive
-                                ? 'border-blue-600 bg-blue-50/70 shadow-sm'
-                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                                ? 'border-blue-600 bg-blue-50/80 shadow-2xs'
+                                : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/50'
                             }`}
                           >
-                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 mb-2 border border-slate-200/50">
+                            <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 border border-slate-200/50 flex-shrink-0 flex items-center justify-center">
                               {sampleImg ? (
                                 <img src={sampleImg} alt={cat.name} className="w-full h-full object-cover" />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-blue-600 font-bold text-xs">
-                                  {cat.name.charAt(0)}
-                                </div>
+                                <span className="text-blue-600 font-bold text-xs">{cat.name.charAt(0)}</span>
                               )}
                             </div>
-                            <h4 className="font-bold text-xs text-slate-900 truncate">{cat.name}</h4>
-                            <p className="text-[11px] text-slate-400 mt-0.5">{count} Barang</p>
+                            <div className="text-left">
+                              <div className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate max-w-[125px]">{cat.name}</div>
+                              <div className="text-[11px] text-slate-400 leading-none mt-0.5">{count} produk</div>
+                            </div>
                           </div>
                         );
                       })}
-                    </div>
+                    </CategoryScrollContainer>
                   ) : (
-                    // Default: 'circle-avatar' (Single Row Stories ala Marketplace)
-                    <div className="flex items-center gap-6 overflow-x-auto pb-4 pt-1 no-scrollbar">
+                    // Default: 'circle-avatar' (Compact Stories Avatar +10%)
+                    <CategoryScrollContainer align={textAlign} className="gap-4 sm:gap-6 pb-2 pt-0.5">
                       <div
                         onClick={() => {
                           setActiveCategory('all');
@@ -833,23 +1109,22 @@ export const PublicWebsiteView: React.FC = () => {
                         className="group flex flex-col items-center gap-2 cursor-pointer flex-shrink-0"
                       >
                         <div
-                          className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 border-2 transition-all flex items-center justify-center ${
+                          className={`w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] rounded-full p-0.5 transition-all flex items-center justify-center ${
                             activeCategory === 'all'
-                              ? 'border-blue-600 ring-4 ring-blue-100 shadow-md'
-                              : 'border-slate-200 group-hover:border-blue-400'
+                              ? 'ring-2 ring-blue-600 ring-offset-2 scale-105 shadow-xs'
+                              : 'border border-slate-200 group-hover:border-blue-400'
                           }`}
                         >
-                          <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">
-                            SEMUA
+                          <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-2xs">
+                            ALL
                           </div>
                         </div>
-                        <span className={`text-xs font-bold text-center max-w-[85px] truncate ${activeCategory === 'all' ? 'text-blue-600' : 'text-slate-700'}`}>
-                          Semua ({products.length})
+                        <span className={`text-[11.5px] sm:text-xs text-center max-w-[76px] truncate leading-tight ${activeCategory === 'all' ? 'font-bold text-blue-600' : 'font-medium text-slate-600 group-hover:text-slate-900'}`}>
+                          Semua
                         </span>
                       </div>
 
                       {categoryObjects.map((cat) => {
-                        const count = products.filter(p => p.category === cat.name).length;
                         const sampleImg = products.find(p => p.category === cat.name)?.image_url;
                         const isActive = activeCategory === cat.name;
                         return (
@@ -862,27 +1137,27 @@ export const PublicWebsiteView: React.FC = () => {
                             className="group flex flex-col items-center gap-2 cursor-pointer flex-shrink-0"
                           >
                             <div
-                              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 border-2 transition-all overflow-hidden ${
+                              className={`w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] rounded-full p-0.5 transition-all overflow-hidden ${
                                 isActive
-                                  ? 'border-blue-600 ring-4 ring-blue-100 shadow-md scale-105'
-                                  : 'border-slate-200 group-hover:border-blue-400'
+                                  ? 'ring-2 ring-blue-600 ring-offset-2 scale-105 shadow-xs'
+                                  : 'border border-slate-200 group-hover:border-blue-400'
                               }`}
                             >
                               <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
                                 {sampleImg ? (
                                   <img src={sampleImg} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                                 ) : (
-                                  <span className="font-bold text-blue-600 text-sm">{cat.name.charAt(0)}</span>
+                                  <span className="font-bold text-blue-600 text-xs sm:text-sm">{cat.name.charAt(0)}</span>
                                 )}
                               </div>
                             </div>
-                            <span className={`text-xs font-bold text-center max-w-[85px] truncate ${isActive ? 'text-blue-600' : 'text-slate-700'}`}>
+                            <span className={`text-[11.5px] sm:text-xs text-center max-w-[76px] truncate leading-tight ${isActive ? 'font-bold text-blue-600' : 'font-medium text-slate-600 group-hover:text-slate-900'}`}>
                               {cat.name}
                             </span>
                           </div>
                         );
                       })}
-                    </div>
+                    </CategoryScrollContainer>
                   )}
                 </div>
               </section>
@@ -890,23 +1165,25 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'catalog': {
+            const isRight = sec.text_align === 'right';
+            const isDarkBg = isColorDark(sec.bg_color);
             return (
-              <section id="katalog" key={sec.id} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-14 sm:pb-20' : 'py-14 sm:py-20'} border-b ${theme.borderClass}`}>
+              <section id="katalog" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-                    <div>
+                  <div className={`flex flex-col sm:flex-row sm:items-end justify-between mb-5 sm:mb-6 gap-3 ${isRight ? 'sm:flex-row-reverse' : ''}`}>
+                    <div className={isRight ? 'text-left sm:text-right flex flex-col sm:items-end' : 'text-left'}>
                       <span className={theme.badgeClass}>Showcase Produk</span>
-                      <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold mt-1`}>
+                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
                         {sec.title || 'Katalog Produk Pilihan'}
                       </h2>
-                      <p className={`text-xs sm:text-sm ${theme.textClass} mt-1`}>
+                      <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
                         {sec.subtitle || 'Temukan produk idaman Anda dan belanja langsung melalui website.'}
                       </p>
                     </div>
 
                     {/* Inline Filter Chips */}
                     {categories.length > 0 && (
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+                      <div className={`flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs ${isRight ? 'justify-start sm:justify-start' : 'justify-start sm:justify-end'}`}>
                         <button
                           onClick={() => setActiveCategory('all')}
                           className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
@@ -935,14 +1212,14 @@ export const PublicWebsiteView: React.FC = () => {
                   </div>
 
                   {filteredProducts.length === 0 ? (
-                    <div className="text-center py-16 px-6 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 max-w-xl mx-auto my-4">
-                      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                        <ShoppingBag className="w-7 h-7" />
+                    <div className="text-center py-12 px-6 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 max-w-xl mx-auto my-4">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <ShoppingBag className="w-6 h-6" />
                       </div>
-                      <h3 className={`text-base font-bold mb-1.5 ${theme.headingClass}`}>
+                      <h3 className={`text-sm sm:text-base font-bold mb-1 ${theme.headingClass}`}>
                         {products.length === 0 ? 'Katalog Produk Sedang Disiapkan' : 'Tidak Ada Produk di Kategori Ini'}
                       </h3>
-                      <p className="text-xs text-slate-500 max-w-sm mx-auto mb-6 leading-relaxed">
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
                         {products.length === 0
                           ? 'Pemilik toko sedang mempersiapkan daftar produk pilihan terbaik.'
                           : 'Belum ada produk untuk filter kategori yang Anda pilih.'}
@@ -952,7 +1229,7 @@ export const PublicWebsiteView: React.FC = () => {
                           href={createWhatsAppLink()}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all hover:scale-105"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all hover:scale-105"
                         >
                           <MessageCircle className="w-4 h-4" />
                           <span>Tanya Toko via WhatsApp</span>
@@ -961,7 +1238,7 @@ export const PublicWebsiteView: React.FC = () => {
                     </div>
                   ) : (
                     /* 5-Column Grid on Desktop (5 x N) */
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-3.5">
                       {filteredProducts.map((p) => {
                         if (sec.variant === 'minimal-frameless') {
                           return (
@@ -970,7 +1247,7 @@ export const PublicWebsiteView: React.FC = () => {
                               className="group flex flex-col justify-between transition-all"
                             >
                               <div>
-                                <div className="relative aspect-square rounded-2xl bg-slate-100 overflow-hidden mb-3">
+                                <div className="relative aspect-square rounded-2xl bg-slate-100 overflow-hidden mb-2.5">
                                   <img
                                     src={p.image_url || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80'}
                                     alt={p.name}
@@ -982,21 +1259,21 @@ export const PublicWebsiteView: React.FC = () => {
                                     </span>
                                   )}
                                 </div>
-                                <h3 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
+                                <h3 className="font-bold text-xs sm:text-[13px] text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
                                   {p.name}
                                 </h3>
-                                <div className="mt-1 flex items-center justify-between">
-                                  <span className="text-xs sm:text-sm font-extrabold text-blue-600">
+                                <div className="mt-0.5 flex items-center justify-between">
+                                  <span className="text-xs sm:text-sm font-black text-blue-600">
                                     {formatIDR(p.price)}
                                   </span>
                                 </div>
                               </div>
 
-                              <div className="mt-3 flex gap-1.5">
+                              <div className="mt-2.5 flex gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => addItem(p)}
-                                  className="flex-1 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-1"
+                                  className="flex-1 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold transition-all flex items-center justify-center gap-1"
                                   title="Tambah ke Keranjang"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
@@ -1041,18 +1318,18 @@ export const PublicWebsiteView: React.FC = () => {
                                     addItem(p);
                                     setIsOpen(true);
                                   }}
-                                  className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform absolute top-2 right-2"
+                                  className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform absolute top-2 right-2"
                                   title="Beli Langsung"
                                 >
-                                  <Plus className="w-4 h-4" />
+                                  <Plus className="w-3.5 h-3.5" />
                                 </button>
                               </div>
 
-                              <div className="p-3">
-                                <h3 className="font-bold text-xs text-slate-900 line-clamp-2 leading-snug">
+                              <div className="p-2.5 sm:p-3">
+                                <h3 className="font-bold text-xs sm:text-[13px] text-slate-900 line-clamp-2 leading-snug">
                                   {p.name}
                                 </h3>
-                                <div className="mt-2 flex items-center justify-between">
+                                <div className="mt-1.5 flex items-center justify-between">
                                   <span className="text-xs sm:text-sm font-black text-blue-600">
                                     {formatIDR(p.price)}
                                   </span>
@@ -1068,7 +1345,7 @@ export const PublicWebsiteView: React.FC = () => {
                           );
                         }
 
-                        // Default: 'standard-card' (Grid 5x Klasik)
+                        // Default: 'standard-card' (Grid 5x Klasik Compact)
                         return (
                           <div
                             key={p.id}
@@ -1088,8 +1365,8 @@ export const PublicWebsiteView: React.FC = () => {
                                 )}
                               </div>
 
-                              <div className="p-3.5 space-y-1.5">
-                                <h3 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
+                              <div className="p-2.5 sm:p-3 space-y-1">
+                                <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
                                   {p.name}
                                 </h3>
                                 <div className="flex items-center gap-1 text-amber-400">
@@ -1097,19 +1374,19 @@ export const PublicWebsiteView: React.FC = () => {
                                     <Star key={i} className="w-2.5 h-2.5 fill-amber-400" />
                                   ))}
                                 </div>
-                                <div className="pt-1">
-                                  <span className="text-xs sm:text-base font-black text-blue-600 block">
+                                <div className="pt-0.5">
+                                  <span className="text-xs sm:text-sm font-black text-blue-600 block">
                                     {formatIDR(p.price)}
                                   </span>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="p-3 pt-0 grid grid-cols-2 gap-1.5">
+                            <div className="p-2.5 sm:p-3 pt-0 grid grid-cols-2 gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => addItem(p)}
-                                className="w-full py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold transition-all flex items-center justify-center gap-1"
+                                className="w-full py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] sm:text-[11px] font-bold transition-all flex items-center justify-center gap-1"
                               >
                                 <Plus className="w-3 h-3" />
                                 <span>Keranjang</span>
@@ -1120,7 +1397,7 @@ export const PublicWebsiteView: React.FC = () => {
                                   addItem(p);
                                   setIsOpen(true);
                                 }}
-                                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
+                                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] sm:text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
                               >
                                 <ShoppingBag className="w-3 h-3" />
                                 <span>Beli</span>
@@ -1137,20 +1414,21 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'about': {
+            const isDarkBg = isColorDark(sec.bg_color);
             if (sec.variant === 'centered-card') {
               return (
-                <section id="tentang" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+                <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="rounded-3xl sm:rounded-[2.5rem] border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-8 sm:p-14 text-center max-w-4xl mx-auto shadow-sm space-y-6">
+                    <div className="rounded-3xl sm:rounded-[2.5rem] border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-6 sm:p-10 text-center max-w-4xl mx-auto shadow-sm space-y-4">
                       <span className={theme.badgeClass}>Tentang Usaha</span>
-                      <h2 className={`text-2xl sm:text-4xl ${theme.headingClass} font-extrabold leading-tight`}>
+                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} leading-tight`}>
                         {sec.title || `Mengenal Lebih Dekat ${website.business_name}`}
                       </h2>
-                      <p className={`text-sm sm:text-base leading-relaxed ${theme.textClass} max-w-2xl mx-auto whitespace-pre-line`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} max-w-2xl mx-auto whitespace-pre-line mt-1`}>
                         {sec.subtitle || website.description}
                       </p>
 
-                      <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-left max-w-xl mx-auto">
+                      <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-left max-w-xl mx-auto">
                         {website.address && (
                           <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 shadow-2xs flex items-start gap-3">
                             <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -1178,18 +1456,18 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'minimal-accent') {
               return (
-                <section id="tentang" key={sec.id} className={`py-14 sm:py-18 border-b ${theme.borderClass}`}>
+                <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                   <div className="max-w-4xl mx-auto px-4 sm:px-6">
-                    <div className="border-l-4 border-blue-600 pl-6 sm:pl-8 space-y-4">
+                    <div className="border-l-4 border-blue-600 pl-6 sm:pl-8 space-y-2">
                       <span className="text-xs font-bold uppercase tracking-widest text-blue-600">Profil Toko</span>
-                      <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-black`}>
+                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
                         {sec.title || `Tentang ${website.business_name}`}
                       </h2>
-                      <p className={`text-sm sm:text-base leading-relaxed ${theme.textClass} whitespace-pre-line`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} whitespace-pre-line mt-1`}>
                         {sec.subtitle || website.description}
                       </p>
                       {website.address && (
-                        <p className="text-xs text-slate-500 pt-2 flex items-center gap-2">
+                        <p className={`text-xs ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} pt-2 flex items-center gap-2`}>
                           <MapPin className="w-4 h-4 text-blue-600" />
                           <span>{website.address}</span>
                         </p>
@@ -1202,40 +1480,40 @@ export const PublicWebsiteView: React.FC = () => {
 
             // Default: 'split'
             return (
-              <section id="tentang" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+              <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-                    <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div className="space-y-2">
                       <span className={theme.badgeClass}>Tentang Usaha</span>
-                      <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold`}>
+                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
                         {sec.title || `Mengenal Lebih Dekat ${website.business_name}`}
                       </h2>
-                      <p className={`text-sm sm:text-base leading-relaxed ${theme.textClass} whitespace-pre-line`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} whitespace-pre-line mt-1`}>
                         {sec.subtitle || website.description}
                       </p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {website.address && (
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/60 flex items-start gap-3.5 shadow-xs">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                            <MapPin className="w-5 h-5" />
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/60 flex items-start gap-3.5 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-4 h-4" />
                           </div>
                           <div>
-                            <strong className="block text-sm font-bold text-slate-900 dark:text-white">Alamat Workshop / Toko Fisik</strong>
-                            <span className={`text-xs ${theme.textClass} mt-0.5 block leading-relaxed`}>{website.address}</span>
+                            <strong className="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Alamat Workshop / Toko Fisik</strong>
+                            <span className={`text-[11px] sm:text-xs ${theme.textClass} mt-0.5 block leading-relaxed`}>{website.address}</span>
                           </div>
                         </div>
                       )}
 
                       {website.operating_hours && (
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/60 flex items-start gap-3.5 shadow-xs">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                            <Clock className="w-5 h-5" />
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/60 flex items-start gap-3.5 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                            <Clock className="w-4 h-4" />
                           </div>
                           <div>
-                            <strong className="block text-sm font-bold text-slate-900 dark:text-white">Jam Operasional Pelayanan</strong>
-                            <span className={`text-xs ${theme.textClass} mt-0.5 block leading-relaxed`}>{website.operating_hours}</span>
+                            <strong className="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Jam Operasional Pelayanan</strong>
+                            <span className={`text-[11px] sm:text-xs ${theme.textClass} mt-0.5 block leading-relaxed`}>{website.operating_hours}</span>
                           </div>
                         </div>
                       )}
@@ -1248,15 +1526,16 @@ export const PublicWebsiteView: React.FC = () => {
 
           case 'gallery': {
             if (galleries.length === 0) return null;
+            const isDarkBg = isColorDark(sec.bg_color);
             return (
-              <section id="galeri" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+              <section id="galeri" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="text-center max-w-2xl mx-auto mb-10">
+                  <div className="text-center max-w-2xl mx-auto mb-6">
                     <span className={theme.badgeClass}>Dokumentasi</span>
-                    <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold mt-1 mb-2`}>
+                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
                       {sec.title || 'Galeri Workshop & Produksi'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass}`}>
+                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
                       {sec.subtitle || 'Lihat proses pengerjaan bahan berkualitas tinggi langsung di tempat kami.'}
                     </p>
                   </div>
@@ -1284,18 +1563,19 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'testimonials': {
+            const isDarkBg = isColorDark(sec.bg_color);
             if (testimonials.length === 0) {
               return (
-                <section id="testimoni" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
                     <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                    <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold mt-2 mb-2`}>
+                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
                       {sec.title || 'Apa Kata Pelanggan Kami?'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} max-w-md mx-auto mb-6`}>
+                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} max-w-md mx-auto mt-1 mb-6`}>
                       {sec.subtitle || 'Ulasan jujur dari pelanggan setia akan ditampilkan di bagian ini.'}
                     </p>
-                    <div className="p-8 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/30 inline-flex flex-col items-center gap-2 max-w-sm mx-auto">
+                    <div className="p-6 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/30 inline-flex flex-col items-center gap-2 max-w-sm mx-auto">
                       <div className="flex text-amber-400">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star key={i} className="w-4 h-4 fill-amber-400" />
@@ -1314,25 +1594,31 @@ export const PublicWebsiteView: React.FC = () => {
             if (sec.variant === 'slider-carousel') {
               const current = testimonials[activeTestiIndex] || testimonials[0];
               return (
-                <section id="testimoni" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
-                  <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
+                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+                  <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-4">
                     <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                    <div className="relative py-6 px-4">
-                      <Quote className="w-12 h-12 text-blue-200 dark:text-blue-900 mx-auto mb-4" />
-                      <p className="text-lg sm:text-2xl font-medium italic text-slate-800 dark:text-slate-200 leading-relaxed max-w-2xl mx-auto">
+                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                      {sec.title || 'Apa Kata Pelanggan Kami?'}
+                    </h2>
+                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                      {sec.subtitle || 'Ulasan jujur dari pembeli yang telah menggunakan produk kami.'}
+                    </p>
+                    <div className="relative py-4 px-4">
+                      <Quote className="w-10 h-10 text-blue-200 dark:text-blue-900 mx-auto mb-3" />
+                      <p className={`text-base sm:text-xl font-medium italic leading-relaxed max-w-2xl mx-auto ${isDarkBg ? 'text-slate-100' : 'text-slate-800'}`}>
                         "{current.feedback}"
                       </p>
-                      <div className="mt-6 flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 shadow-md">
+                      <div className="mt-5 flex flex-col items-center gap-1.5">
+                        <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-200 shadow-md">
                           {current.avatar_url ? (
                             <img src={current.avatar_url} alt={current.client_name} className="w-full h-full object-cover" />
                           ) : (
                             <span className="font-black text-sm text-slate-600 flex items-center justify-center w-full h-full">{current.client_name.charAt(0)}</span>
                           )}
                         </div>
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{current.client_name}</h4>
-                        <span className="text-xs text-slate-400">{current.role_or_company}</span>
-                        <div className="flex text-amber-400 pt-1">
+                        <h4 className={`font-bold text-xs sm:text-sm ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>{current.client_name}</h4>
+                        <span className={`text-[11px] ${isDarkBg ? 'text-slate-300' : 'text-slate-400'}`}>{current.role_or_company}</span>
+                        <div className="flex text-amber-400 pt-0.5">
                           {Array.from({ length: current.rating }).map((_, i) => (
                             <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
                           ))}
@@ -1342,7 +1628,7 @@ export const PublicWebsiteView: React.FC = () => {
 
                     {/* Next / Prev buttons */}
                     {testimonials.length > 1 && (
-                      <div className="flex items-center justify-center gap-3 pt-2">
+                      <div className="flex items-center justify-center gap-3 pt-1">
                         <button
                           onClick={() => setActiveTestiIndex((prev) => (prev > 0 ? prev - 1 : testimonials.length - 1))}
                           className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
@@ -1375,29 +1661,29 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'speech-bubble') {
               return (
-                <section id="testimoni" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="text-center max-w-2xl mx-auto mb-10">
+                    <div className="text-center max-w-2xl mx-auto mb-6">
                       <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                      <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold mt-1 mb-2`}>
+                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
                         {sec.title || 'Apa Kata Pelanggan Kami?'}
                       </h2>
-                      <p className={`text-xs sm:text-sm ${theme.textClass}`}>
+                      <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
                         {sec.subtitle || 'Ulasan jujur dari pembeli yang telah menggunakan produk kami.'}
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {testimonials.map((testi) => (
-                        <div key={testi.id} className="space-y-4">
-                          <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 shadow-xs relative">
+                        <div key={testi.id} className="space-y-3">
+                          <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 shadow-xs relative">
                             <p className="text-xs sm:text-sm italic text-slate-700 dark:text-slate-300 leading-relaxed">
                               "{testi.feedback}"
                             </p>
                             <div className="absolute -bottom-2.5 left-8 w-5 h-5 bg-white dark:bg-slate-800 border-b border-r border-slate-200/80 rotate-45" />
                           </div>
                           <div className="flex items-center gap-3 pl-4 pt-1">
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-200">
                               {testi.avatar_url ? (
                                 <img src={testi.avatar_url} alt={testi.client_name} className="w-full h-full object-cover" />
                               ) : (
@@ -1424,24 +1710,24 @@ export const PublicWebsiteView: React.FC = () => {
 
             // Default: 'grid-cards'
             return (
-              <section id="testimoni" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+              <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="text-center max-w-2xl mx-auto mb-10">
+                  <div className="text-center max-w-2xl mx-auto mb-6">
                     <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                    <h2 className={`text-2xl sm:text-3xl ${theme.headingClass} font-extrabold mt-1 mb-2`}>
+                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
                       {sec.title || 'Apa Kata Pelanggan Kami?'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass}`}>
+                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
                       {sec.subtitle || 'Ulasan jujur dari pembeli yang telah menggunakan produk kami.'}
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {testimonials.map((testi) => (
-                      <div key={testi.id} className={`${theme.cardClass} p-6 space-y-4`}>
+                      <div key={testi.id} className={`${theme.cardClass} p-5 space-y-3`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
                               {testi.avatar_url ? (
                                 <img
                                   src={testi.avatar_url}
@@ -1453,8 +1739,8 @@ export const PublicWebsiteView: React.FC = () => {
                               )}
                             </div>
                             <div>
-                              <h4 className="font-bold text-sm">{testi.client_name}</h4>
-                              <p className={`text-xs ${theme.textClass}`}>{testi.role_or_company}</p>
+                              <h4 className="font-bold text-xs sm:text-sm">{testi.client_name}</h4>
+                              <p className={`text-[11px] sm:text-xs ${theme.textClass}`}>{testi.role_or_company}</p>
                             </div>
                           </div>
                           <div className="flex text-amber-400">
@@ -1476,17 +1762,17 @@ export const PublicWebsiteView: React.FC = () => {
 
           case 'contact': {
             return (
-              <section id="kontak" key={sec.id} className={`py-14 sm:py-20 border-b ${theme.borderClass}`}>
+              <section id="kontak" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                  <div className="bg-gradient-to-tr from-blue-700 to-indigo-800 rounded-3xl p-8 sm:p-12 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div className="space-y-4 max-w-xl">
+                  <div className="bg-gradient-to-tr from-blue-700 to-indigo-800 rounded-3xl p-6 sm:p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="space-y-3 max-w-xl">
                       <span className="text-xs uppercase font-bold tracking-wider px-3 py-1 rounded bg-blue-500/30 text-blue-200 border border-blue-400/20">
                         {sec.title || 'Hubungi Kami Langsung'}
                       </span>
-                      <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+                      <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
                         Punya Pertanyaan atau Pesanan Khusus?
                       </h2>
-                      <p className="text-blue-100 text-sm leading-relaxed">
+                      <p className="text-blue-100 text-xs sm:text-sm leading-relaxed mt-1">
                         {sec.subtitle || 'Konsultasikan produk idaman Anda langsung dengan tim kami via WhatsApp. Kami siap membantu dengan senang hati.'}
                       </p>
 
@@ -1526,7 +1812,7 @@ export const PublicWebsiteView: React.FC = () => {
           case 'footer': {
             if (sec.variant === 'centered') {
               return (
-                <footer key={sec.id} className="py-14 border-t border-slate-200/60 text-xs">
+                <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className="py-14 border-t border-slate-200/60 text-xs">
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
                     <div className="flex flex-col items-center">
                       {website.logo_url && (
@@ -1566,7 +1852,7 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'compact-bar') {
               return (
-                <footer key={sec.id} className="py-6 border-t border-slate-200/60 text-xs">
+                <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className="py-6 border-t border-slate-200/60 text-xs">
                   <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <span className="text-slate-500">
                       © {new Date().getFullYear()} <strong className="text-slate-800 dark:text-white">{website.business_name}</strong>. All rights reserved.

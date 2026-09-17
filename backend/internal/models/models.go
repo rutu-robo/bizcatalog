@@ -135,6 +135,7 @@ type SectionConfig struct {
 	Order      int         `json:"order"`
 	BgColor    string      `json:"bg_color,omitempty"`
 	BgImageURL string      `json:"bg_image_url,omitempty"`
+	TextAlign  string      `json:"text_align,omitempty"` // left, center, right
 }
 
 type GalleryItem struct {

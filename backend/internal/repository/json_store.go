@@ -201,6 +201,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "split",
 			IsVisible: true,
 			Order:     1,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -211,6 +212,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "coupon-ticket",
 			IsVisible: true,
 			Order:     2,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -221,6 +223,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "circle-avatar",
 			IsVisible: true,
 			Order:     3,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -231,6 +234,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "standard-card",
 			IsVisible: true,
 			Order:     4,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -241,6 +245,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "split",
 			IsVisible: true,
 			Order:     5,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -251,6 +256,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "grid",
 			IsVisible: true,
 			Order:     6,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -261,6 +267,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "grid-cards",
 			IsVisible: true,
 			Order:     7,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -271,6 +278,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "default",
 			IsVisible: true,
 			Order:     8,
+			TextAlign: "left",
 		},
 		{
 			ID:        uuid.New().String(),
@@ -281,6 +289,7 @@ func DefaultSections(websiteID string) []models.SectionConfig {
 			Variant:   "multi-column",
 			IsVisible: true,
 			Order:     9,
+			TextAlign: "left",
 		},
 	}
 }

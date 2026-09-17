@@ -207,8 +207,8 @@ export const ThemeSelectorPage: React.FC = () => {
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full">
-                    Modern Pill
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                    Liquid Glass ala Apple
                   </span>
                   {activeHeaderStyle === 'floating' && (
                     <span className="text-blue-600 font-bold text-xs flex items-center gap-1">
@@ -217,27 +217,30 @@ export const ThemeSelectorPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Preview Ilustrasi Floating */}
-                <div className="h-28 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-100 p-3 relative overflow-hidden flex flex-col justify-center items-center mb-3 border border-indigo-100">
-                  {/* Floating Pill Bar */}
-                  <div className="w-11/12 h-8 rounded-full bg-white/95 shadow-xl border border-slate-200/90 flex items-center justify-between px-3 text-[9px] text-slate-800 font-medium animate-pulse">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div>
-                      <span className="font-bold text-[9px]">BRAND</span>
+                {/* Preview Ilustrasi Floating Liquid Glass */}
+                <div className="h-28 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-3 relative overflow-hidden flex flex-col justify-center items-center mb-3 shadow-inner">
+                  {/* Liquid Glass Capsule Bar */}
+                  <div className="w-11/12 h-9 rounded-full backdrop-blur-xl backdrop-saturate-[180%] bg-white/60 shadow-[0_8px_20px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.9)] border border-white/70 flex items-center justify-between px-3 text-[9px] text-slate-900 font-bold transition-transform hover:scale-105">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-xs"></div>
+                      <span className="font-black text-[9px] tracking-tight">BRAND</span>
                     </div>
-                    <span className="text-[8px] text-slate-500">Menu Navigasi</span>
-                    <span className="bg-blue-600 text-white rounded-full px-1.5 py-0.5 text-[8px] font-bold">🛒</span>
+                    <span className="text-[8px] text-slate-700 font-semibold hidden sm:inline">Katalog • Promo</span>
+                    <div className="flex items-center gap-1">
+                      <span className="bg-white/80 border border-white/80 rounded-full px-1.5 py-0.5 text-[7px] text-slate-800 shadow-2xs">🛒 1</span>
+                      <span className="bg-blue-600 text-white rounded-full px-2 py-0.5 text-[7px] font-bold shadow-2xs">Chat</span>
+                    </div>
                   </div>
-                  <span className="text-[9px] text-indigo-700 font-medium mt-3 bg-white/70 px-2 py-0.5 rounded-full shadow-2xs">
-                    Melayang di Atas Konten
+                  <span className="text-[9px] text-white/95 font-bold mt-2.5 bg-black/25 backdrop-blur-xs px-2.5 py-0.5 rounded-full shadow-2xs border border-white/20">
+                    ✨ Apple Liquid Glassmorphism
                   </span>
                 </div>
 
                 <h4 className="font-bold text-slate-900 text-sm mb-1">
-                  Floating Island (Melayang)
+                  Floating Island (Apple Liquid Glass)
                 </h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Header mengambang bebas dengan sudut rounded halus (*floating pill*) dan bayangan lembut di atas konten. Sangat estetik & kekinian.
+                  Header melayang dengan estetika Apple Liquid Glass (kaca buram berbias cahaya specular rim, pembiasan warna mewah, dan kontrol mikro-glass). Sangat modern, elegan & premium.
                 </p>
               </div>
 

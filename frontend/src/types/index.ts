@@ -97,6 +97,7 @@ export interface SectionConfig {
   order: number;
   bg_color?: string;
   bg_image_url?: string;
+  text_align?: 'left' | 'center' | 'right';
 }
 
 export interface Testimonial {
