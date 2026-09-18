@@ -117,7 +117,7 @@
     "type": "catalog",
     "title": "Katalog Produk Unggulan",
     "subtitle": "Pilihan produk berkualitas tinggi yang siap mempercantik ruangan Anda.",
-    "variant": "overlay-badge",
+    "variant": "minimal-frameless",
     "is_visible": true,
     "order": 3,
     "text_align": "right"
@@ -128,7 +128,7 @@
     "type": "promos",
     "title": "Promo Spesial Diskon \u0026 Kupon Belanja",
     "subtitle": "Klaim voucher kupon diskon eksklusif untuk hemat lebih banyak hari ini!",
-    "variant": "full-banner",
+    "variant": "coupon-ticket",
     "is_visible": true,
     "order": 4,
     "bg_color": "#1e1b4b"
