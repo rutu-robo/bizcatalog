@@ -85,6 +85,7 @@ type Product struct {
 	Category    string        `json:"category"`
 	ImageURL    string        `json:"image_url"`
 	Status      ProductStatus `json:"status"`
+	Stock       int           `json:"stock"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
 }
@@ -135,7 +136,57 @@ type SectionConfig struct {
 	Order      int         `json:"order"`
 	BgColor    string      `json:"bg_color,omitempty"`
 	BgImageURL string      `json:"bg_image_url,omitempty"`
-	TextAlign  string      `json:"text_align,omitempty"` // left, center, right
+	TextAlign        string      `json:"text_align,omitempty"` // left, center, right
+	CountdownDays    int         `json:"countdown_days,omitempty"`
+	CountdownHours   int         `json:"countdown_hours,omitempty"`
+	CountdownMinutes int         `json:"countdown_minutes,omitempty"`
+	CountdownEnd     string      `json:"countdown_end,omitempty"`
+	PromoBadge       string      `json:"promo_badge,omitempty"`
+	PromoButtonText  string      `json:"promo_button_text,omitempty"`
+	PromoButtonLink  string      `json:"promo_button_link,omitempty"`
+	PromotionID      string      `json:"promotion_id,omitempty"`
+	TextColorMode    string      `json:"text_color_mode,omitempty"`  // 'auto', 'light', 'dark'
+	OverlayOpacity   int         `json:"overlay_opacity,omitempty"` // 30, 50, 70, 90
+}
+
+type PromoType string
+
+const (
+	PromoTypeCountdown PromoType = "countdown"
+	PromoTypeCoupon    PromoType = "coupon"
+	PromoTypeDiscount  PromoType = "discount"
+)
+
+type TargetType string
+
+const (
+	TargetAll        TargetType = "all"
+	TargetCategory   TargetType = "category"
+	TargetProducts   TargetType = "products"
+)
+
+type Promotion struct {
+	ID               string     `json:"id"`
+	WebsiteID        string     `json:"website_id"`
+	Title            string     `json:"title"`
+	Subtitle         string     `json:"subtitle,omitempty"`
+	Type             PromoType  `json:"type"` // countdown, coupon, discount
+	Code             string     `json:"code,omitempty"`
+	DiscountPercent  int        `json:"discount_percent,omitempty"`
+	DiscountAmount   float64    `json:"discount_amount,omitempty"`
+	MinSpend         float64    `json:"min_spend,omitempty"`
+	CountdownDays    int        `json:"countdown_days,omitempty"`
+	CountdownHours   int        `json:"countdown_hours,omitempty"`
+	CountdownMinutes int        `json:"countdown_minutes,omitempty"`
+	Badge            string     `json:"badge,omitempty"`
+	ButtonText       string     `json:"button_text,omitempty"`
+	ButtonLink       string     `json:"button_link,omitempty"`
+	TargetType       TargetType `json:"target_type"` // all, category, products
+	TargetCategory   string     `json:"target_category,omitempty"`
+	ProductIDs       []string   `json:"product_ids,omitempty"`
+	IsActive         bool       `json:"is_active"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type GalleryItem struct {
@@ -186,6 +237,7 @@ type PublicWebsiteData struct {
 	Testimonials []Testimonial    `json:"testimonials"`
 	Galleries    []GalleryItem    `json:"galleries"`
 	Assets       []Asset          `json:"assets"`
+	Promotions   []Promotion      `json:"promotions"`
 }
 
 // E-Commerce Order Models

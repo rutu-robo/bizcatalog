@@ -509,6 +509,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	p.Category = req.Category
 	p.ImageURL = req.ImageURL
 	p.Status = req.Status
+	p.Stock = req.Stock
 	p.UpdatedAt = time.Now()
 
 	if err := h.repo.UpdateProduct(p); err != nil {
@@ -992,4 +993,267 @@ func (h *Handler) UpdateOrderAdmin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, order)
 }
+
+// ============================================================================
+// PROMOTIONS HANDLERS
+// ============================================================================
+
+type CreatePromotionRequest struct {
+	Title            string            `json:"title" binding:"required"`
+	Subtitle         string            `json:"subtitle"`
+	Type             models.PromoType  `json:"type" binding:"required"`
+	Code             string            `json:"code"`
+	DiscountPercent  int               `json:"discount_percent"`
+	DiscountAmount   float64           `json:"discount_amount"`
+	MinSpend         float64           `json:"min_spend"`
+	CountdownDays    int               `json:"countdown_days"`
+	CountdownHours   int               `json:"countdown_hours"`
+	CountdownMinutes int               `json:"countdown_minutes"`
+	Badge            string            `json:"badge"`
+	ButtonText       string            `json:"button_text"`
+	ButtonLink       string            `json:"button_link"`
+	TargetType       models.TargetType `json:"target_type"`
+	TargetCategory   string            `json:"target_category"`
+	ProductIDs       []string          `json:"product_ids"`
+	IsActive         *bool             `json:"is_active"`
+}
+
+type UpdatePromotionRequest struct {
+	Title            string            `json:"title"`
+	Subtitle         string            `json:"subtitle"`
+	Type             models.PromoType  `json:"type"`
+	Code             string            `json:"code"`
+	DiscountPercent  *int              `json:"discount_percent"`
+	DiscountAmount   *float64          `json:"discount_amount"`
+	MinSpend         *float64          `json:"min_spend"`
+	CountdownDays    *int              `json:"countdown_days"`
+	CountdownHours   *int              `json:"countdown_hours"`
+	CountdownMinutes *int              `json:"countdown_minutes"`
+	Badge            string            `json:"badge"`
+	ButtonText       string            `json:"button_text"`
+	ButtonLink       string            `json:"button_link"`
+	TargetType       models.TargetType `json:"target_type"`
+	TargetCategory   string            `json:"target_category"`
+	ProductIDs       []string          `json:"product_ids"`
+	IsActive         *bool             `json:"is_active"`
+}
+
+func (h *Handler) GetPromotions(c *gin.Context) {
+	userID := c.GetString("userID")
+	ws, err := h.repo.GetWebsiteByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Website tidak ditemukan"})
+		return
+	}
+
+	promos, err := h.repo.GetPromotionsByWebsiteID(ws.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memuat promo"})
+		return
+	}
+	if promos == nil {
+		promos = make([]models.Promotion, 0)
+	}
+	c.JSON(http.StatusOK, promos)
+}
+
+func (h *Handler) CreatePromotion(c *gin.Context) {
+	userID := c.GetString("userID")
+	ws, err := h.repo.GetWebsiteByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Website tidak ditemukan"})
+		return
+	}
+
+	var req CreatePromotionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Input promo tidak valid: " + err.Error()})
+		return
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Judul promo wajib diisi"})
+		return
+	}
+
+	isActive := true
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
+
+	targetType := req.TargetType
+	if targetType == "" {
+		targetType = models.TargetAll
+	}
+
+	buttonText := req.ButtonText
+	if buttonText == "" {
+		if req.Type == models.PromoTypeCountdown {
+			buttonText = "Shop The Sale"
+		} else if req.Type == models.PromoTypeCoupon {
+			buttonText = "Salin Kode"
+		} else {
+			buttonText = "Lihat Promo"
+		}
+	}
+
+	buttonLink := req.ButtonLink
+	if buttonLink == "" {
+		buttonLink = "#katalog"
+	}
+
+	badge := req.Badge
+	if badge == "" {
+		if req.Type == models.PromoTypeCountdown {
+			badge = "Limited Time Offer"
+		} else if req.Type == models.PromoTypeCoupon {
+			badge = "Kupon Spesial"
+		} else {
+			badge = "Penawaran Terbatas"
+		}
+	}
+
+	now := time.Now()
+	promo := models.Promotion{
+		ID:               "promo-" + uuid.New().String()[:8],
+		WebsiteID:        ws.ID,
+		Title:            title,
+		Subtitle:         strings.TrimSpace(req.Subtitle),
+		Type:             req.Type,
+		Code:             strings.ToUpper(strings.TrimSpace(req.Code)),
+		DiscountPercent:  req.DiscountPercent,
+		DiscountAmount:   req.DiscountAmount,
+		MinSpend:         req.MinSpend,
+		CountdownDays:    req.CountdownDays,
+		CountdownHours:   req.CountdownHours,
+		CountdownMinutes: req.CountdownMinutes,
+		Badge:            badge,
+		ButtonText:       buttonText,
+		ButtonLink:       buttonLink,
+		TargetType:       targetType,
+		TargetCategory:   req.TargetCategory,
+		ProductIDs:       req.ProductIDs,
+		IsActive:         isActive,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+
+	if promo.ProductIDs == nil {
+		promo.ProductIDs = make([]string, 0)
+	}
+
+	if err := h.repo.CreatePromotion(&promo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan promo"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, promo)
+}
+
+func (h *Handler) UpdatePromotion(c *gin.Context) {
+	userID := c.GetString("userID")
+	ws, err := h.repo.GetWebsiteByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Website tidak ditemukan"})
+		return
+	}
+
+	promoID := c.Param("id")
+	promo, err := h.repo.GetPromotionByID(promoID)
+	if err != nil || promo.WebsiteID != ws.ID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Promo tidak ditemukan"})
+		return
+	}
+
+	var req UpdatePromotionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Input promo tidak valid"})
+		return
+	}
+
+	if req.Title != "" {
+		promo.Title = strings.TrimSpace(req.Title)
+	}
+	if req.Subtitle != "" {
+		promo.Subtitle = strings.TrimSpace(req.Subtitle)
+	}
+	if req.Type != "" {
+		promo.Type = req.Type
+	}
+	if req.Code != "" {
+		promo.Code = strings.ToUpper(strings.TrimSpace(req.Code))
+	}
+	if req.DiscountPercent != nil {
+		promo.DiscountPercent = *req.DiscountPercent
+	}
+	if req.DiscountAmount != nil {
+		promo.DiscountAmount = *req.DiscountAmount
+	}
+	if req.MinSpend != nil {
+		promo.MinSpend = *req.MinSpend
+	}
+	if req.CountdownDays != nil {
+		promo.CountdownDays = *req.CountdownDays
+	}
+	if req.CountdownHours != nil {
+		promo.CountdownHours = *req.CountdownHours
+	}
+	if req.CountdownMinutes != nil {
+		promo.CountdownMinutes = *req.CountdownMinutes
+	}
+	if req.Badge != "" {
+		promo.Badge = req.Badge
+	}
+	if req.ButtonText != "" {
+		promo.ButtonText = req.ButtonText
+	}
+	if req.ButtonLink != "" {
+		promo.ButtonLink = req.ButtonLink
+	}
+	if req.TargetType != "" {
+		promo.TargetType = req.TargetType
+	}
+	if req.TargetCategory != "" {
+		promo.TargetCategory = req.TargetCategory
+	}
+	if req.ProductIDs != nil {
+		promo.ProductIDs = req.ProductIDs
+	}
+	if req.IsActive != nil {
+		promo.IsActive = *req.IsActive
+	}
+	promo.UpdatedAt = time.Now()
+
+	if err := h.repo.UpdatePromotion(promo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui promo"})
+		return
+	}
+
+	c.JSON(http.StatusOK, promo)
+}
+
+func (h *Handler) DeletePromotion(c *gin.Context) {
+	userID := c.GetString("userID")
+	ws, err := h.repo.GetWebsiteByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Website tidak ditemukan"})
+		return
+	}
+
+	promoID := c.Param("id")
+	promo, err := h.repo.GetPromotionByID(promoID)
+	if err != nil || promo.WebsiteID != ws.ID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Promo tidak ditemukan"})
+		return
+	}
+
+	if err := h.repo.DeletePromotion(promoID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus promo"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Promo berhasil dihapus"})
+}
+
 

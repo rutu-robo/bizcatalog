@@ -14,16 +14,16 @@
     "facebook": "",
     "tiktok": "",
     "logo_url": "",
-    "theme_id": "lifestyle",
+    "theme_id": "minimalist",
     "bank_name": "Bank Central Asia (BCA)",
     "bank_account_no": "8830-1928-41",
     "bank_account_name": "Mebel Jaya Abadi",
     "qris_image_url": "https://api.qrserver.com/v1/create-qr-code/?size=300x300\u0026data=00020101021126580014ID.LINKAJA.WWW01189360091438830192845204581253033605802ID5916MEBEL+JAYA+ABADI6006JEPARA62070703A01630489AB",
     "enable_cod": true,
     "enable_bank_transfer": true,
-    "header_style": "floating",
+    "header_style": "dynamic-scroll",
     "created_at": "2026-09-16T13:13:19.785356+07:00",
-    "updated_at": "2026-09-17T13:43:53.092575+07:00"
+    "updated_at": "2026-09-21T19:12:44.134871+07:00"
   },
   {
     "id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",

@@ -60,4 +60,12 @@ type Repository interface {
 	GetOrderByNumber(websiteID string, orderNumber string) (*models.Order, error)
 	UpdateOrderStatus(orderID string, status models.OrderStatus) error
 	UpdateOrder(order *models.Order) error
+
+	// Promotions
+	GetPromotionsByWebsiteID(websiteID string) ([]models.Promotion, error)
+	GetPromotionByID(id string) (*models.Promotion, error)
+	CreatePromotion(promo *models.Promotion) error
+	UpdatePromotion(promo *models.Promotion) error
+	DeletePromotion(id string) error
 }
+

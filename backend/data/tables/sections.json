@@ -13,11 +13,17 @@
     "id": "sec-promo-suryo",
     "website_id": "ws-e20b468d-f1d7-4ea3-8091-fd2a22b360e1",
     "type": "promos",
-    "title": "Voucher Belanja \u0026 Promo Diskon",
-    "subtitle": "Klaim kupon potongan harga eksklusif sebelum periode promo berakhir!",
+    "title": "Super Sale Up To 50% Off!",
+    "subtitle": "On selected items. Shop now before the deal ends.",
     "variant": "full-banner",
     "is_visible": true,
-    "order": 2
+    "order": 2,
+    "countdown_days": 2,
+    "countdown_hours": 14,
+    "countdown_minutes": 37,
+    "promo_badge": "Limited Time Offer",
+    "promo_button_text": "Shop The Sale",
+    "promo_button_link": "#katalog"
   },
   {
     "id": "sec-cat-suryo",
@@ -98,40 +104,9 @@
     "variant": "bg-full",
     "is_visible": true,
     "order": 1,
-    "text_align": "left"
-  },
-  {
-    "id": "8f28e961-dc99-4350-8696-ce581e7878b2",
-    "website_id": "ws-mebeljaya-001",
-    "type": "categories",
-    "title": "Kategori Pilihan",
-    "subtitle": "Pilih kategori untuk memfilter koleksi produk favorit Anda.",
-    "variant": "pill-badges",
-    "is_visible": true,
-    "order": 2,
-    "text_align": "center"
-  },
-  {
-    "id": "94de0797-215d-4b91-877b-dae63abbae14",
-    "website_id": "ws-mebeljaya-001",
-    "type": "catalog",
-    "title": "Katalog Produk Unggulan",
-    "subtitle": "Pilihan produk berkualitas tinggi yang siap mempercantik ruangan Anda.",
-    "variant": "minimal-frameless",
-    "is_visible": true,
-    "order": 3,
-    "text_align": "right"
-  },
-  {
-    "id": "1c7399a8-a6dd-4918-b60c-5c90fb09c951",
-    "website_id": "ws-mebeljaya-001",
-    "type": "promos",
-    "title": "Promo Spesial Diskon \u0026 Kupon Belanja",
-    "subtitle": "Klaim voucher kupon diskon eksklusif untuk hemat lebih banyak hari ini!",
-    "variant": "coupon-ticket",
-    "is_visible": true,
-    "order": 4,
-    "bg_color": "#1e1b4b"
+    "bg_image_url": "/uploads/1789992026909710000-51fcc24e.jpg",
+    "text_align": "left",
+    "text_color_mode": "auto"
   },
   {
     "id": "ea97c743-8dca-4a0d-a968-e6c457acb4fd",
@@ -141,7 +116,47 @@
     "subtitle": "Berpengalaman lebih dari 15 tahun melayani pesanan furnitur rumah tangga, cafe, dan kantor di seluruh Indonesia.",
     "variant": "split",
     "is_visible": true,
-    "order": 5
+    "order": 2
+  },
+  {
+    "id": "8f28e961-dc99-4350-8696-ce581e7878b2",
+    "website_id": "ws-mebeljaya-001",
+    "type": "categories",
+    "title": "Kategori Pilihan",
+    "subtitle": "Pilih kategori untuk memfilter koleksi produk favorit Anda.",
+    "variant": "box-cards",
+    "is_visible": true,
+    "order": 3,
+    "text_align": "center"
+  },
+  {
+    "id": "94de0797-215d-4b91-877b-dae63abbae14",
+    "website_id": "ws-mebeljaya-001",
+    "type": "catalog",
+    "title": "Katalog Produk Unggulan",
+    "subtitle": "Pilihan produk berkualitas tinggi yang siap mempercantik ruangan Anda.",
+    "variant": "standard-card",
+    "is_visible": true,
+    "order": 4,
+    "text_align": "right"
+  },
+  {
+    "id": "1c7399a8-a6dd-4918-b60c-5c90fb09c951",
+    "website_id": "ws-mebeljaya-001",
+    "type": "promos",
+    "title": "Promo Spesial Diskon \u0026 Kupon Belanja",
+    "subtitle": "Klaim voucher kupon diskon eksklusif untuk hemat lebih banyak hari ini!",
+    "variant": "split-card",
+    "is_visible": true,
+    "order": 5,
+    "text_align": "center",
+    "countdown_days": 3,
+    "countdown_hours": 14,
+    "countdown_minutes": 37,
+    "promo_badge": "Limited Time Offer",
+    "promo_button_text": "Shop The Sale",
+    "promo_button_link": "#katalog",
+    "overlay_opacity": 60
   },
   {
     "id": "6bec876c-df98-4e31-a848-bd835c3d90b1",
@@ -159,7 +174,7 @@
     "type": "testimonials",
     "title": "Apa Kata Pelanggan Kami?",
     "subtitle": "Kepuasan pelanggan adalah prioritas utama setiap karya kami.",
-    "variant": "grid-cards",
+    "variant": "slider-carousel",
     "is_visible": true,
     "order": 7
   },
@@ -179,7 +194,7 @@
     "type": "footer",
     "title": "",
     "subtitle": "",
-    "variant": "multi-column",
+    "variant": "centered",
     "is_visible": true,
     "order": 9
   }

@@ -42,6 +42,7 @@ type JSONStore struct {
 	testimonialsTable *TableStore[models.Testimonial]
 	galleriesTable    *TableStore[models.GalleryItem]
 	ordersTable       *TableStore[models.Order]
+	promotionsTable   *TableStore[models.Promotion]
 }
 
 // NewJSONStore creates or migrates to a separated per-table storage system.
@@ -71,6 +72,7 @@ func NewJSONStore(basePath string) (*JSONStore, error) {
 		testimonialsTable: NewTableStore[models.Testimonial](filepath.Join(tablesDir, "testimonials.json")),
 		galleriesTable:    NewTableStore[models.GalleryItem](filepath.Join(tablesDir, "galleries.json")),
 		ordersTable:       NewTableStore[models.Order](filepath.Join(tablesDir, "orders.json")),
+		promotionsTable:   NewTableStore[models.Promotion](filepath.Join(tablesDir, "promotions.json")),
 	}
 
 	// Determine if migration from legacy db.json is needed
@@ -444,6 +446,59 @@ func (s *JSONStore) initSeedData() {
 		},
 	}
 
+	promotions := []models.Promotion{
+		{
+			ID:               "promo-flash-001",
+			WebsiteID:        websiteID,
+			Title:            "Super Sale Up To 50% Off!",
+			Subtitle:         "On selected items. Shop now before the deal ends.",
+			Type:             models.PromoTypeCountdown,
+			DiscountPercent:  50,
+			CountdownDays:    2,
+			CountdownHours:   14,
+			CountdownMinutes: 37,
+			Badge:            "Limited Time Offer",
+			ButtonText:       "Shop The Sale",
+			ButtonLink:       "#katalog",
+			TargetType:       models.TargetAll,
+			IsActive:         true,
+			CreatedAt:        now,
+			UpdatedAt:        now,
+		},
+		{
+			ID:              "promo-coup-001",
+			WebsiteID:       websiteID,
+			Title:           "Voucher Diskon Pelanggan Baru",
+			Subtitle:        "Potongan 10% untuk pesanan Anda",
+			Type:            models.PromoTypeCoupon,
+			Code:            "HEMAT10",
+			DiscountPercent: 10,
+			MinSpend:        1000000,
+			Badge:           "10% OFF",
+			ButtonText:      "Salin Kode",
+			TargetType:      models.TargetAll,
+			IsActive:        true,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		},
+		{
+			ID:              "promo-disc-001",
+			WebsiteID:       websiteID,
+			Title:           "Promo Spesial Set Ruang Makan",
+			Subtitle:        "Koleksi pilihan dengan potongan harga langsung 30%",
+			Type:            models.PromoTypeDiscount,
+			DiscountPercent: 30,
+			Badge:           "30% OFF",
+			ButtonText:      "Lihat Produk",
+			ButtonLink:      "#katalog",
+			TargetType:      models.TargetCategory,
+			TargetCategory:  "Ruang Makan",
+			IsActive:        true,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		},
+	}
+
 	_ = s.usersTable.saveRecords([]models.User{demoUser})
 	_ = s.websitesTable.saveRecords([]models.Website{demoWebsite})
 	_ = s.productsTable.saveRecords(products)
@@ -452,6 +507,7 @@ func (s *JSONStore) initSeedData() {
 	_ = s.testimonialsTable.saveRecords(testimonials)
 	_ = s.galleriesTable.saveRecords(galleries)
 	_ = s.ordersTable.saveRecords([]models.Order{})
+	_ = s.promotionsTable.saveRecords(promotions)
 }
 
 // ============================================================================
@@ -1002,6 +1058,11 @@ func (s *JSONStore) GetPublicWebsiteData(subdomain string) (*models.PublicWebsit
 		assets = make([]models.Asset, 0)
 	}
 
+	promotions, _ := s.GetPromotionsByWebsiteID(ws.ID)
+	if promotions == nil {
+		promotions = make([]models.Promotion, 0)
+	}
+
 	return &models.PublicWebsiteData{
 		Website:      ws,
 		Categories:   categories,
@@ -1010,6 +1071,7 @@ func (s *JSONStore) GetPublicWebsiteData(subdomain string) (*models.PublicWebsit
 		Testimonials: testimonials,
 		Galleries:    galleries,
 		Assets:       assets,
+		Promotions:   promotions,
 	}, nil
 }
 
@@ -1096,3 +1158,78 @@ func (s *JSONStore) UpdateOrder(order *models.Order) error {
 		return errors.New("pesanan tidak ditemukan")
 	})
 }
+
+// ============================================================================
+// PROMOTION METHODS
+// ============================================================================
+
+func (s *JSONStore) GetPromotionsByWebsiteID(websiteID string) ([]models.Promotion, error) {
+	var result []models.Promotion
+	err := s.promotionsTable.Read(func(promotions []models.Promotion) error {
+		for _, p := range promotions {
+			if p.WebsiteID == websiteID {
+				result = append(result, p)
+			}
+		}
+		return nil
+	})
+	if result == nil {
+		result = make([]models.Promotion, 0)
+	}
+	return result, err
+}
+
+func (s *JSONStore) GetPromotionByID(id string) (*models.Promotion, error) {
+	var found *models.Promotion
+	err := s.promotionsTable.Read(func(promotions []models.Promotion) error {
+		for _, p := range promotions {
+			if p.ID == id {
+				copy := p
+				found = &copy
+				return nil
+			}
+		}
+		return errors.New("promo tidak ditemukan")
+	})
+	return found, err
+}
+
+func (s *JSONStore) CreatePromotion(promo *models.Promotion) error {
+	return s.promotionsTable.Write(func(promotions *[]models.Promotion) error {
+		*promotions = append(*promotions, *promo)
+		return nil
+	})
+}
+
+func (s *JSONStore) UpdatePromotion(promo *models.Promotion) error {
+	return s.promotionsTable.Write(func(promotions *[]models.Promotion) error {
+		for i, p := range *promotions {
+			if p.ID == promo.ID {
+				promo.UpdatedAt = time.Now()
+				(*promotions)[i] = *promo
+				return nil
+			}
+		}
+		return errors.New("promo tidak ditemukan")
+	})
+}
+
+func (s *JSONStore) DeletePromotion(id string) error {
+	return s.promotionsTable.Write(func(promotions *[]models.Promotion) error {
+		filtered := make([]models.Promotion, 0)
+		found := false
+		for _, p := range *promotions {
+			if p.ID == id {
+				found = true
+				continue
+			}
+			filtered = append(filtered, p)
+		}
+		if !found {
+			return errors.New("promo tidak ditemukan")
+		}
+		*promotions = filtered
+		return nil
+	})
+}
+

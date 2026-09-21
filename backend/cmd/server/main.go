@@ -93,6 +93,12 @@ func main() {
 			protected.PUT("/categories/:id", h.UpdateCategory)
 			protected.DELETE("/categories/:id", h.DeleteCategory)
 
+			// Promotions
+			protected.GET("/promotions", h.GetPromotions)
+			protected.POST("/promotions", h.CreatePromotion)
+			protected.PUT("/promotions/:id", h.UpdatePromotion)
+			protected.DELETE("/promotions/:id", h.DeletePromotion)
+
 			// Products (with Subscription limit protection on creation)
 			protected.GET("/products", h.GetProducts)
 			protected.POST("/products", middleware.SubscriptionLimitMiddleware(repo), h.CreateProduct)

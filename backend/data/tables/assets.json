@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "ast-7a47d3ba-a8fd-4478-98bc-4f03fbc31158",
+    "website_id": "ws-mebeljaya-001",
+    "name": "ChatGPT Image 15 Sep 2026, 13.46.05.png",
+    "type": "hero",
+    "url": "/uploads/1789990850765656000-998c7dcc.png",
+    "size_bytes": 796569,
+    "created_at": "2026-09-21T18:40:50.767306+07:00"
+  },
+  {
+    "id": "ast-442f2bb8-e5dd-4c47-b76b-5833c492eb6d",
+    "website_id": "ws-mebeljaya-001",
+    "name": "mazda-3.jpg",
+    "type": "hero",
+    "url": "/uploads/1789992026909710000-51fcc24e.jpg",
+    "size_bytes": 54828,
+    "created_at": "2026-09-21T19:00:26.912433+07:00"
+  }
+]
