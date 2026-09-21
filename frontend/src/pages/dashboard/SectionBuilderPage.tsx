@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../../components/dashboard/Header';
 import { api } from '../../api/client';
-import { SectionConfig, SectionType } from '../../types';
+import { SectionConfig, SectionType, Promotion } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { MediaPickerModal } from '../../components/MediaPickerModal';
 import {
@@ -34,9 +34,12 @@ import {
   AlertCircle,
   AlignLeft,
   AlignCenter,
-  AlignRight
+  AlignRight,
+  Clock,
+  BadgePercent
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { resolveContrastTokens, isColorDark } from '../../utils/contrast';
 
 const VARIANT_LABELS: Record<string, string> = {
   // Hero
@@ -56,7 +59,7 @@ const VARIANT_LABELS: Record<string, string> = {
   'minimal-accent': 'Minimalist Accent (Aksen Garis Kiri)',
   // Promos
   'coupon-ticket': 'Kupon Tiket Diskon (Voucher Siap Salin)',
-  'full-banner': 'Flash Sale Banner (Hitung Mundur)',
+  'full-banner': 'Countdown Flash Sale (Hitung Mundur Hari, Jam & Menit)',
   'split-card': 'Split Promo Card (Diskon 2 Sisi)',
   // Testimonials
   'grid-cards': 'Grid Ulasan Multi-Kolom',
@@ -90,7 +93,7 @@ const VARIANT_DESCRIPTIONS: Record<string, string> = {
   'centered-card': 'Teks profil berada di dalam wadah kartu besar berpusat di tengah.',
   'minimal-accent': 'Tata letak elegan dengan garis aksen vertikal warna tema di sebelah kiri teks.',
   'coupon-ticket': 'Voucher tiket diskon berdesain perforasi gerigi dengan tombol salin instan.',
-  'full-banner': 'Banner promo mencolok dengan penghitung waktu mundur flash sale live.',
+  'full-banner': 'Banner promo eksklusif dengan hitung mundur hari, jam, menit, dan detik secara real-time.',
   'split-card': 'Kartu diskon 2 sisi dengan badge persentase diskon besar.',
   'grid-cards': 'Grid kartu testimoni multi-kolom dengan avatar, nama, dan rating bintang 5.',
   'speech-bubble': 'Gaya balon chat percakapan pembeli yang unik dan ramah.',
@@ -242,6 +245,7 @@ const COLOR_PRESETS = [
 export const SectionBuilderPage: React.FC = () => {
   const { website, updateWebsite } = useAuthStore();
   const [sections, setSections] = useState<SectionConfig[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [headerStyle, setHeaderStyle] = useState<'solid' | 'floating' | 'dynamic-scroll'>(
     website?.header_style || 'dynamic-scroll'
@@ -265,7 +269,11 @@ export const SectionBuilderPage: React.FC = () => {
   const loadSections = async () => {
     setIsLoading(true);
     try {
-      const data = await api.getSections();
+      const [data, promosData] = await Promise.all([
+        api.getSections(),
+        api.getPromotions().catch(() => []),
+      ]);
+      setPromotions(Array.isArray(promosData) ? promosData : []);
       const sanitized = data.map((sec) => {
         if (
           (sec.type === 'hero' && (sec.variant === 'split' || sec.variant === 'card-rounded')) ||
@@ -352,6 +360,66 @@ export const SectionBuilderPage: React.FC = () => {
         newSections[index].text_align = 'left';
       }
     }
+    if (newSections[index].type === 'promos' && variant === 'full-banner') {
+      if (newSections[index].countdown_days === undefined) newSections[index].countdown_days = 2;
+      if (newSections[index].countdown_hours === undefined) newSections[index].countdown_hours = 14;
+      if (newSections[index].countdown_minutes === undefined) newSections[index].countdown_minutes = 37;
+      if (!newSections[index].promo_badge) newSections[index].promo_badge = 'Limited Time Offer';
+      if (!newSections[index].promo_button_text) newSections[index].promo_button_text = 'Shop The Sale';
+      if (!newSections[index].promo_button_link) newSections[index].promo_button_link = '#katalog';
+    }
+    setSections(newSections);
+  };
+
+  const handlePromoFieldChange = (
+    index: number,
+    field: 'countdown_days' | 'countdown_hours' | 'countdown_minutes' | 'promo_badge' | 'promo_button_text' | 'promo_button_link',
+    value: string | number
+  ) => {
+    const newSections = [...sections];
+    newSections[index] = {
+      ...newSections[index],
+      [field]: value,
+    };
+    setSections(newSections);
+  };
+
+  const handleLinkPromotion = (index: number, promoId: string) => {
+    const newSections = [...sections];
+    if (promoId === 'manual' || !promoId) {
+      newSections[index] = {
+        ...newSections[index],
+        promotion_id: undefined,
+      };
+      setSections(newSections);
+      return;
+    }
+
+    const selectedPromo = promotions.find((p) => p.id === promoId);
+    if (!selectedPromo) return;
+
+    let targetVariant = newSections[index].variant;
+    if (selectedPromo.type === 'countdown') {
+      targetVariant = 'full-banner';
+    } else if (selectedPromo.type === 'coupon') {
+      targetVariant = 'coupon-ticket';
+    } else if (selectedPromo.type === 'discount') {
+      targetVariant = 'split-card';
+    }
+
+    newSections[index] = {
+      ...newSections[index],
+      promotion_id: selectedPromo.id,
+      title: selectedPromo.title || newSections[index].title,
+      subtitle: selectedPromo.subtitle || newSections[index].subtitle,
+      variant: targetVariant,
+      countdown_days: selectedPromo.countdown_days ?? newSections[index].countdown_days,
+      countdown_hours: selectedPromo.countdown_hours ?? newSections[index].countdown_hours,
+      countdown_minutes: selectedPromo.countdown_minutes ?? newSections[index].countdown_minutes,
+      promo_badge: selectedPromo.badge || newSections[index].promo_badge,
+      promo_button_text: selectedPromo.button_text || newSections[index].promo_button_text,
+      promo_button_link: selectedPromo.button_link || newSections[index].promo_button_link,
+    };
     setSections(newSections);
   };
 
@@ -384,6 +452,24 @@ export const SectionBuilderPage: React.FC = () => {
     newSections[index] = {
       ...newSections[index],
       text_align: align,
+    };
+    setSections(newSections);
+  };
+
+  const handleTextColorModeChange = (index: number, mode: 'auto' | 'light' | 'dark') => {
+    const newSections = [...sections];
+    newSections[index] = {
+      ...newSections[index],
+      text_color_mode: mode,
+    };
+    setSections(newSections);
+  };
+
+  const handleOverlayOpacityChange = (index: number, opacity: number) => {
+    const newSections = [...sections];
+    newSections[index] = {
+      ...newSections[index],
+      overlay_opacity: opacity,
     };
     setSections(newSections);
   };
@@ -446,24 +532,16 @@ export const SectionBuilderPage: React.FC = () => {
   // Check if catalog section is active (2-way layout: left / right only)
   const isCatalog = activeSection?.type === 'catalog';
 
-  const isColorDark = (hex?: string) => {
-    if (!hex) return false;
-    let c = hex.replace('#', '');
-    if (c.length === 3) {
-      c = c.split('').map((x) => x + x).join('');
-    }
-    if (c.length !== 6) return false;
-    const r = parseInt(c.substring(0, 2), 16);
-    const g = parseInt(c.substring(2, 4), 16);
-    const b = parseInt(c.substring(4, 6), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance < 0.5;
-  };
-
   // Render Visual Mockup Preview in Inspector Panel
   const renderVisualMockup = (type: SectionType, variant: string) => {
     const customBg = activeSection?.bg_color || undefined;
-    const isDark = isColorDark(customBg);
+    const hasBgImage = !!activeSection?.bg_image_url;
+    const tokens = resolveContrastTokens(
+      customBg,
+      activeSection?.text_color_mode,
+      hasBgImage
+    );
+    const isDark = tokens.isDark;
     const heroImg =
       activeSection?.bg_image_url ||
       'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&auto=format&fit=crop&q=80';
@@ -587,58 +665,133 @@ export const SectionBuilderPage: React.FC = () => {
           </div>
         );
 
-      case 'promos':
+      case 'promos': {
+        const linked = activeSection?.promotion_id
+          ? promotions.find((p) => p.id === activeSection.promotion_id)
+          : (promotions.find((p) => p.type === (variant === 'full-banner' ? 'countdown' : variant === 'coupon-ticket' ? 'coupon' : 'discount') && p.is_active) || promotions[0]);
+
         if (variant === 'full-banner') {
+          const days = String(linked?.countdown_days ?? activeSection?.countdown_days ?? 2).padStart(2, '0');
+          const hours = String(linked?.countdown_hours ?? activeSection?.countdown_hours ?? 14).padStart(2, '0');
+          const mins = String(linked?.countdown_minutes ?? activeSection?.countdown_minutes ?? 37).padStart(2, '0');
+          const badge = linked?.badge || activeSection?.promo_badge || 'Limited Time Offer';
+          const btnText = linked?.button_text || activeSection?.promo_button_text || 'Shop The Sale';
+          const pTitle = linked?.title || 'Super Sale Up To 50% Off!';
+          const pSub = linked?.subtitle || 'On selected items. Shop now before the deal ends.';
+          const promoBgImg = activeSection?.bg_image_url;
+          const overlayOp = activeSection?.overlay_opacity ?? 70;
+
           return (
             <div
-              className="h-36 rounded-2xl bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 p-4 text-white flex flex-col justify-between shadow-md transition-colors"
-              style={customBg ? { background: customBg } : undefined}
+              className={`rounded-2xl border p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl transition-colors relative overflow-hidden ${
+                promoBgImg ? 'text-white border-white/20' : (isDark ? 'text-white bg-[#141414] border-neutral-800' : 'text-slate-900 bg-white border-slate-200 shadow-sm')
+              }`}
+              style={{
+                backgroundColor: promoBgImg ? undefined : (customBg || (isDark ? '#141414' : '#ffffff')),
+                backgroundImage: promoBgImg ? `linear-gradient(rgba(0,0,0,${overlayOp / 100}), rgba(0,0,0,${overlayOp / 100})), url("${promoBgImg}")` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase bg-black/30 px-2 py-0.5 rounded">⚡ FLASH SALE</span>
-                <span className="text-[10px] font-bold">Diskon s/d 50%</span>
+              {/* Subtle ambient glow */}
+              {!promoBgImg && (
+                <div className="absolute -left-10 -top-10 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+              )}
+
+              {/* Left Content */}
+              <div className="space-y-1 text-center md:text-left z-10">
+                <span className="text-[10px] font-black tracking-widest uppercase text-orange-500 block">
+                  {badge}
+                </span>
+                <h5 className={`text-sm sm:text-base font-black tracking-tight leading-tight ${promoBgImg || isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {pTitle}
+                </h5>
+                <p className={`text-[11px] line-clamp-1 max-w-sm ${promoBgImg || isDark ? 'text-neutral-300' : 'text-slate-500'}`}>
+                  {pSub}
+                </p>
               </div>
-              <div className="text-center">
-                <h5 className="text-sm font-black">{activeSection?.title || 'Promo Flash Sale Terbatas'}</h5>
-                <div className="inline-flex gap-2 mt-2 bg-black/40 px-3 py-1 rounded-lg text-xs font-mono font-bold">
-                  <span>12 Jam</span> : <span>00 Mnt</span> : <span>00 Dtk</span>
+
+              {/* Countdown Timer Boxes */}
+              <div className="flex items-center gap-1.5 sm:gap-2 text-center z-10">
+                <div className={`${promoBgImg || isDark ? 'bg-neutral-900/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-xl px-2.5 py-1.5 min-w-[46px] shadow-inner`}>
+                  <span className={`text-sm sm:text-base font-black font-mono block ${promoBgImg || isDark ? 'text-white' : 'text-slate-900'}`}>{days}</span>
+                  <span className={`text-[9px] font-semibold block uppercase ${promoBgImg || isDark ? 'text-neutral-400' : 'text-slate-500'}`}>Days</span>
                 </div>
+                <div className={`${promoBgImg || isDark ? 'bg-neutral-900/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-xl px-2.5 py-1.5 min-w-[46px] shadow-inner`}>
+                  <span className={`text-sm sm:text-base font-black font-mono block ${promoBgImg || isDark ? 'text-white' : 'text-slate-900'}`}>{hours}</span>
+                  <span className={`text-[9px] font-semibold block uppercase ${promoBgImg || isDark ? 'text-neutral-400' : 'text-slate-500'}`}>Hours</span>
+                </div>
+                <div className={`${promoBgImg || isDark ? 'bg-neutral-900/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-xl px-2.5 py-1.5 min-w-[46px] shadow-inner`}>
+                  <span className={`text-sm sm:text-base font-black font-mono block ${promoBgImg || isDark ? 'text-white' : 'text-slate-900'}`}>{mins}</span>
+                  <span className={`text-[9px] font-semibold block uppercase ${promoBgImg || isDark ? 'text-neutral-400' : 'text-slate-500'}`}>Mins</span>
+                </div>
+                <div className={`${promoBgImg || isDark ? 'bg-neutral-900/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-xl px-2.5 py-1.5 min-w-[46px] shadow-inner`}>
+                  <span className="text-sm sm:text-base font-black font-mono block text-orange-500">59</span>
+                  <span className={`text-[9px] font-semibold block uppercase ${promoBgImg || isDark ? 'text-neutral-400' : 'text-slate-500'}`}>Secs</span>
+                </div>
+              </div>
+
+              {/* Button */}
+              <div className="z-10">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold text-xs shadow-md transition-all whitespace-nowrap"
+                >
+                  {btnText}
+                </button>
               </div>
             </div>
           );
         }
         if (variant === 'split-card') {
+          const promoBgImg = activeSection?.bg_image_url;
+          const overlayOp = activeSection?.overlay_opacity ?? 70;
+          const pTitle = linked?.title || 'Diskon Pengguna Baru';
+          const pSub = linked?.subtitle || 'Gunakan kode voucher saat checkout belanja.';
+          const pDiscount = linked?.discount_percent ? `${linked.discount_percent}% OFF` : '30% OFF';
+          const pCode = linked?.code || 'HEMAT10';
+
           return (
             <div
-              className={`h-36 rounded-2xl border p-3 grid grid-cols-3 gap-3 shadow-xs transition-colors ${
-                isDark ? 'border-slate-700' : 'border-slate-200 bg-white'
+              className={`rounded-2xl border p-4 shadow-xs transition-colors flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden ${
+                promoBgImg ? 'text-white border-white/20' : (isDark ? 'border-white/15 bg-white/10 text-white' : 'border-slate-200 bg-white text-slate-900')
               }`}
-              style={{ backgroundColor: customBg }}
+              style={{
+                backgroundColor: promoBgImg ? undefined : (customBg && !isDark ? customBg : undefined),
+                backgroundImage: promoBgImg ? `linear-gradient(rgba(0,0,0,${overlayOp / 100}), rgba(0,0,0,${overlayOp / 100})), url("${promoBgImg}")` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
             >
-              <div className="col-span-2 flex flex-col justify-center space-y-1">
-                <span className="text-[9px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded w-max">Promo Spesial</span>
-                <h5 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{activeSection?.title || 'Diskon Pengguna Baru'}</h5>
-                <p className={`text-[10px] ${isDark ? 'text-slate-300' : 'text-slate-500'}`}>Gunakan kode voucher saat checkout belanja.</p>
+              <div className="space-y-1.5 max-w-sm z-10">
+                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full inline-block ${
+                  promoBgImg || isDark ? 'text-orange-300 bg-white/15 border border-white/20' : 'text-blue-600 bg-blue-50'
+                }`}>
+                  Promo Spesial
+                </span>
+                <h5 className={`text-xs font-bold ${promoBgImg || isDark ? 'text-white' : 'text-slate-900'}`}>{pTitle}</h5>
+                <p className={`text-[10px] ${promoBgImg || isDark ? 'text-slate-200' : 'text-slate-500'}`}>{pSub}</p>
               </div>
-              <div className="rounded-xl bg-red-500 text-white flex flex-col items-center justify-center text-center p-2">
-                <span className="text-lg font-black leading-none">30%</span>
-                <span className="text-[9px] font-bold uppercase">OFF</span>
+              <div className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex flex-col items-center justify-center text-center px-4 py-2.5 min-w-[120px] shadow-md z-10 border border-white/15">
+                <span className="text-base font-black leading-none">{pDiscount}</span>
+                <span className="text-[9px] text-blue-200 font-mono mt-1">{pCode}</span>
               </div>
             </div>
           );
         }
+      }
         // Coupon ticket default
         return (
           <div
-            className={`h-36 rounded-2xl border p-3 flex items-center justify-center gap-2.5 transition-colors ${
-              isDark ? 'border-slate-700' : 'border-slate-200 bg-slate-50'
+            className={`rounded-2xl border p-3.5 flex items-center justify-center gap-3 transition-colors ${
+              isDark ? 'border-white/15 bg-white/5' : 'border-slate-200 bg-slate-50'
             }`}
             style={{ backgroundColor: customBg }}
           >
             <div className="w-1/2 bg-white rounded-xl border border-dashed border-blue-400 p-2.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between text-[10px]">
-                <span className="font-bold text-blue-600">HEMAT10</span>
-                <span className="text-[9px] text-slate-400">Potongan 10%</span>
+                <span className="font-bold text-blue-600 font-mono">HEMAT10</span>
+                <span className="text-[9px] text-slate-500 font-bold">10% OFF</span>
               </div>
               <div className="mt-2 bg-blue-50 text-blue-600 text-center text-[9px] font-bold py-1 rounded">
                 Salin Kode ✓
@@ -646,8 +799,8 @@ export const SectionBuilderPage: React.FC = () => {
             </div>
             <div className="w-1/2 bg-white rounded-xl border border-dashed border-emerald-400 p-2.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between text-[10px]">
-                <span className="font-bold text-emerald-600">ONGKIRFREE</span>
-                <span className="text-[9px] text-slate-400">Gratis Ongkir</span>
+                <span className="font-bold text-emerald-600 font-mono">ONGKIRFREE</span>
+                <span className="text-[9px] text-slate-500 font-bold">GRATIS ONGKIR</span>
               </div>
               <div className="mt-2 bg-emerald-50 text-emerald-600 text-center text-[9px] font-bold py-1 rounded">
                 Salin Kode ✓
@@ -852,18 +1005,12 @@ export const SectionBuilderPage: React.FC = () => {
               <p className={`text-[10px] font-medium line-clamp-1 ${isDark ? 'text-slate-300' : 'text-slate-400'}`}>{activeSection?.subtitle || 'Pilihan Produk'}</p>
             </div>
 
-            {/* Filter Chips Mockup */}
-            <div className={`flex items-center gap-1 overflow-x-auto no-scrollbar text-[8px] ${isRight ? 'justify-start sm:justify-start' : 'justify-start sm:justify-end'}`}>
-              <span className="px-2 py-0.5 rounded-md font-bold bg-blue-600 text-white shadow-2xs flex-shrink-0">Semua</span>
-              <span className={`px-2 py-0.5 rounded-md font-medium border flex-shrink-0 ${
-                isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200/60'
-              }`}>Living</span>
-              <span className={`px-2 py-0.5 rounded-md font-medium border flex-shrink-0 ${
-                isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200/60'
-              }`}>Dining</span>
-              <span className={`px-2 py-0.5 rounded-md font-medium border flex-shrink-0 ${
-                isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200/60'
-              }`}>Office</span>
+            {/* Tombol Lihat Semuanya Mockup */}
+            <div className={`flex items-center ${isRight ? 'justify-start sm:justify-start' : 'justify-start sm:justify-end'}`}>
+              <span className="px-2 py-0.5 rounded-md font-bold bg-blue-600 text-white text-[9px] shadow-2xs flex items-center gap-1">
+                <span>Lihat Semuanya</span>
+                <span>&rarr;</span>
+              </span>
             </div>
           </div>
         );
@@ -1569,376 +1716,481 @@ export const SectionBuilderPage: React.FC = () => {
                   </div>
 
                   {/* ============================================================ */}
-                  {/* SECTION BACKGROUND CUSTOMIZATION: COLOR (ALL) & PHOTO (HERO) */}
+                  {/* SECTION BACKGROUND CUSTOMIZATION: COLOR, PHOTO & CONTRAST */}
                   {/* ============================================================ */}
-                  {activeSection && (
-                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Palette className="w-4 h-4 text-blue-600" />
-                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                            {activeSection.type === 'hero'
-                              ? 'Kustomisasi Latar Belakang Hero (Warna & Foto)'
-                              : `Warna Dasar Section (${activeMeta?.name || activeSection.type})`}
-                          </h4>
-                        </div>
-                        {(activeSection.bg_color || (activeSection.type === 'hero' && activeSection.bg_image_url)) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleBgColorChange(selectedIndex, '');
-                              if (activeSection.type === 'hero') {
+                  {activeSection && (() => {
+                    const isPromo = activeSection.type === 'promos';
+                    const isCouponVariant = isPromo && activeSection.variant === 'coupon-ticket';
+                    const supportsBgImage = activeSection.type === 'hero' || (isPromo && !isCouponVariant);
+                    const hasBgImage = !!activeSection.bg_image_url;
+                    const textColorMode = activeSection.text_color_mode || 'auto';
+
+                    return (
+                      <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-blue-600" />
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                              {supportsBgImage
+                                ? `Kustomisasi Latar Belakang (${activeMeta?.name || activeSection.type}) - Warna & Foto`
+                                : `Warna Dasar Section (${activeMeta?.name || activeSection.type})`}
+                            </h4>
+                          </div>
+                          {(activeSection.bg_color || activeSection.bg_image_url || activeSection.text_color_mode) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleBgColorChange(selectedIndex, '');
                                 handleBgImageChange(selectedIndex, '');
-                              }
-                            }}
-                            className="text-[11px] font-semibold text-slate-400 hover:text-red-600 transition-colors"
-                          >
-                            Reset Latar Belakang
-                          </button>
+                                handleTextColorModeChange(selectedIndex, 'auto');
+                                handleOverlayOpacityChange(selectedIndex, 70);
+                              }}
+                              className="text-[11px] font-semibold text-slate-400 hover:text-red-600 transition-colors"
+                            >
+                              Reset Latar & Kontras
+                            </button>
+                          )}
+                        </div>
+
+                        {/* CATATAN KHUSUS KUPON TIKET: TIDAK MENGGUNAKAN GAMBAR LATAR */}
+                        {isCouponVariant && (
+                          <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
+                            <Info className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">
+                              <strong>Varian Kupon Tiket</strong> menggunakan desain lembaran voucher fisik berlubang perforasi/gerigi. Gunakan pilihan <strong>Warna Dasar</strong> di bawah ini (tanpa foto) agar voucher tetap rapi, estetik, dan kode kupon mudah dibaca pembeli.
+                            </span>
+                          </div>
                         )}
-                      </div>
 
-                      {/* 1. GANTI FOTO BACKGROUND (KHUSUS HERO) */}
-                      {activeSection.type === 'hero' && (
-                        <div className="space-y-2 pb-3 border-b border-slate-200/80">
-                          <label className="block text-[11px] font-bold text-slate-700">
-                            Foto Banner / Background Hero
-                          </label>
-                          <div className="flex items-center gap-3">
-                            {activeSection.bg_image_url ? (
-                              <div className="w-16 h-12 rounded-xl border border-slate-300 overflow-hidden relative group flex-shrink-0 shadow-2xs">
-                                <img
-                                  src={activeSection.bg_image_url}
-                                  alt="Hero background"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-16 h-12 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 text-[10px] flex-shrink-0">
-                                Default
-                              </div>
-                            )}
+                        {/* 1. GANTI FOTO BACKGROUND (UNTUK HERO & PROMOS KECUALI KUPON TIKET) */}
+                        {supportsBgImage && (
+                          <div className="space-y-2 pb-3 border-b border-slate-200/80">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[11px] font-bold text-slate-700">
+                                Foto Banner / Background Latar
+                              </label>
+                              <span className="text-[10px] text-slate-400">
+                                {activeSection.type === 'promos'
+                                  ? 'Menampilkan banner promo mewah bernuansa sinematik'
+                                  : 'Aktif pada Full Cover & Split Hero'}
+                              </span>
+                            </div>
 
-                            <div className="flex-1 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setIsMediaModalOpen(true)}
-                                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5"
-                              >
-                                <Upload className="w-3.5 h-3.5 text-blue-600" />
-                                <span>Pilih dari Media Library</span>
-                              </button>
+                            <div className="flex items-center gap-3">
+                              {activeSection.bg_image_url ? (
+                                <div className="w-16 h-12 rounded-xl border border-slate-300 overflow-hidden relative group flex-shrink-0 shadow-2xs">
+                                  <img
+                                    src={activeSection.bg_image_url}
+                                    alt="Section background"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-16 h-12 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 text-[10px] flex-shrink-0">
+                                  Tanpa Foto
+                                </div>
+                              )}
 
-                              {activeSection.bg_image_url && (
+                              <div className="flex-1 flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => handleBgImageChange(selectedIndex, '')}
-                                  className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-red-600 hover:bg-red-50 text-xs font-bold transition-all flex items-center gap-1"
+                                  onClick={() => setIsMediaModalOpen(true)}
+                                  className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Gunakan Default</span>
+                                  <Upload className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>Pilih dari Media Library</span>
+                                </button>
+
+                                {activeSection.bg_image_url && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBgImageChange(selectedIndex, '')}
+                                    className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-red-600 hover:bg-red-50 text-xs font-bold transition-all flex items-center gap-1"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Hapus Foto</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <input
+                              type="url"
+                              value={activeSection.bg_image_url || ''}
+                              onChange={(e) => handleBgImageChange(selectedIndex, e.target.value)}
+                              placeholder="Atau tempel URL gambar banner (https://...)"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-600"
+                            />
+
+                            {/* SMART OVERLAY OPACITY SLIDER/PRESET JIKA FOTO BANNER AKTIF */}
+                            {hasBgImage && (
+                              <div className="pt-2 flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                                <div>
+                                  <span className="font-bold text-slate-700 block">Tingkat Gelap Overlay Foto</span>
+                                  <span className="text-[10px] text-slate-400">Menjaga teks tetap tajam di atas gambar</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {[40, 60, 75, 90].map((op) => {
+                                    const currentOp = activeSection.overlay_opacity ?? 70;
+                                    const isSelected = currentOp === op;
+                                    return (
+                                      <button
+                                        key={op}
+                                        type="button"
+                                        onClick={() => handleOverlayOpacityChange(selectedIndex, op)}
+                                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                                          isSelected
+                                            ? 'bg-blue-600 text-white shadow-2xs'
+                                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                                        }`}
+                                      >
+                                        {op}%
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 2. PILIHAN WARNA DASAR SECTION (UNTUK SEMUA SECTION) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[11px] font-bold text-slate-700">
+                              Warna Dasar Section (Background Color)
+                            </label>
+                            <span className="text-[10px] text-slate-400">
+                              Pilih tema warna atau custom hex
+                            </span>
+                          </div>
+
+                          {/* SMART DISABLING ALERT JIKA FULL COVER IMAGE AKTIF (HANYA HERO BG-FULL) */}
+                          {isFullCoverImageActive ? (
+                            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2 animate-fade-in">
+                              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-bold">Warna Dasar Ditimpa Foto Layar Penuh</span>
+                                <p className="text-[11px] text-amber-700 mt-0.5">
+                                  Varian <strong>Latar Belakang Penuh (Full Cover)</strong> menampilkan foto membentang menutupi seluruh layar. Pilihan warna dasar dinonaktifkan secara otomatis.
+                                </p>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {/* COLOR PRESETS PALETTE */}
+                          <div
+                            className={`space-y-2 transition-opacity ${
+                              isFullCoverImageActive ? 'opacity-40 pointer-events-none' : 'opacity-100'
+                            }`}
+                          >
+                            <div className="flex flex-wrap gap-2 items-center">
+                              {COLOR_PRESETS.map((preset) => {
+                                const isSelectedColor = (activeSection.bg_color || '') === preset.value;
+                                return (
+                                  <button
+                                    key={preset.name}
+                                    type="button"
+                                    onClick={() => handleBgColorChange(selectedIndex, preset.value)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border shadow-2xs ${
+                                      isSelectedColor
+                                        ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50 text-blue-900'
+                                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`w-3.5 h-3.5 rounded-full flex-shrink-0 ${
+                                        preset.border ? 'border border-slate-300' : ''
+                                      }`}
+                                      style={{
+                                        backgroundColor: preset.value || '#ffffff',
+                                        background: preset.value
+                                          ? preset.value
+                                          : 'linear-gradient(135deg, #f1f5f9 50%, #cbd5e1 50%)',
+                                      }}
+                                    />
+                                    <span>{preset.name}</span>
+                                    {isSelectedColor && <Check className="w-3 h-3 text-blue-600 stroke-[3]" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* CUSTOM HEX COLOR PICKER */}
+                            <div className="flex items-center gap-2 pt-1">
+                              <span className="text-[11px] font-semibold text-slate-500">Custom Hex:</span>
+                              <input
+                                type="color"
+                                value={activeSection.bg_color || '#ffffff'}
+                                onChange={(e) => handleBgColorChange(selectedIndex, e.target.value)}
+                                className="w-7 h-7 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white"
+                                title="Pilih warna custom"
+                              />
+                              <input
+                                type="text"
+                                value={activeSection.bg_color || ''}
+                                onChange={(e) => handleBgColorChange(selectedIndex, e.target.value)}
+                                placeholder="#0f172a atau kosongkan"
+                                className="px-2.5 py-1 text-xs font-mono rounded-lg border border-slate-200 bg-white w-32 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700"
+                              />
+                              {activeSection.bg_color && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleBgColorChange(selectedIndex, '')}
+                                  className="text-[11px] text-slate-400 hover:text-slate-600 font-semibold"
+                                >
+                                  Reset Warna
                                 </button>
                               )}
                             </div>
                           </div>
-
-                          <input
-                            type="url"
-                            value={activeSection.bg_image_url || ''}
-                            onChange={(e) => handleBgImageChange(selectedIndex, e.target.value)}
-                            placeholder="Atau tempel URL gambar langsung (https://...)"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-600"
-                          />
-                        </div>
-                      )}
-
-                      {/* 2. PILIHAN WARNA DASAR SECTION (UNTUK SEMUA SECTION) */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-bold text-slate-700">
-                            Warna Dasar Section (Background Color)
-                          </label>
-                          <span className="text-[10px] text-slate-400">
-                            {activeSection.type === 'hero'
-                              ? 'Aktif pada varian Split & Card Rounded'
-                              : 'Mengubah warna dasar section'}
-                          </span>
                         </div>
 
-                        {/* SMART DISABLING ALERT JIKA FULL COVER IMAGE AKTIF (HANYA HERO BG-FULL) */}
-                        {isFullCoverImageActive ? (
-                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2 animate-fade-in">
-                            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <span className="font-bold">Warna Dasar Ditimpa Foto Layar Penuh</span>
-                              <p className="text-[11px] text-amber-700 mt-0.5">
-                                Varian <strong>Latar Belakang Penuh (Full Cover)</strong> menampilkan foto membentang menutupi seluruh layar. Pilihan warna dasar dinonaktifkan secara otomatis.
-                              </p>
-                            </div>
+                        {/* 3. MODE KONTRAS TEKS CERDAS (SMART ADAPTIVE CONTRAST) */}
+                        <div className="pt-3 border-t border-slate-200/80 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[11px] font-bold text-slate-700">
+                              Mode Kontras Teks (WCAG 2.1)
+                            </label>
+                            <span className="text-[10px] text-slate-400">
+                              Menjamin keterbacaan teks 100%
+                            </span>
                           </div>
-                        ) : null}
-
-                        {/* COLOR PRESETS PALETTE */}
-                        <div
-                          className={`space-y-2 transition-opacity ${
-                            isFullCoverImageActive ? 'opacity-40 pointer-events-none' : 'opacity-100'
-                          }`}
-                        >
-                          <div className="flex flex-wrap gap-2 items-center">
-                            {COLOR_PRESETS.map((preset) => {
-                              const isSelectedColor = (activeSection.bg_color || '') === preset.value;
-                              return (
-                                <button
-                                  key={preset.name}
-                                  type="button"
-                                  onClick={() => handleBgColorChange(selectedIndex, preset.value)}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border shadow-2xs ${
-                                    isSelectedColor
-                                      ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50 text-blue-900'
-                                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                                  }`}
-                                >
-                                  <span
-                                    className={`w-3.5 h-3.5 rounded-full flex-shrink-0 ${
-                                      preset.border ? 'border border-slate-300' : ''
-                                    }`}
-                                    style={{
-                                      backgroundColor: preset.value || '#ffffff',
-                                      background: preset.value
-                                        ? preset.value
-                                        : 'linear-gradient(135deg, #f1f5f9 50%, #cbd5e1 50%)',
-                                    }}
-                                  />
-                                  <span>{preset.name}</span>
-                                  {isSelectedColor && <Check className="w-3 h-3 text-blue-600 stroke-[3]" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* CUSTOM HEX COLOR PICKER */}
-                          <div className="flex items-center gap-2 pt-1">
-                            <span className="text-[11px] font-semibold text-slate-500">Custom Hex:</span>
-                            <input
-                              type="color"
-                              value={activeSection.bg_color || '#ffffff'}
-                              onChange={(e) => handleBgColorChange(selectedIndex, e.target.value)}
-                              className="w-7 h-7 rounded-lg border border-slate-200 cursor-pointer p-0.5 bg-white"
-                              title="Pilih warna custom"
-                            />
-                            <input
-                              type="text"
-                              value={activeSection.bg_color || ''}
-                              onChange={(e) => handleBgColorChange(selectedIndex, e.target.value)}
-                              placeholder="#0f172a atau kosongkan"
-                              className="px-2.5 py-1 text-xs font-mono rounded-lg border border-slate-200 bg-white w-32 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700"
-                            />
-                            {activeSection.bg_color && (
-                              <button
-                                type="button"
-                                onClick={() => handleBgColorChange(selectedIndex, '')}
-                                className="text-[11px] text-slate-400 hover:text-slate-600 font-semibold"
-                              >
-                                Reset Warna
-                              </button>
-                            )}
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTextColorModeChange(selectedIndex, 'auto')}
+                              className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border shadow-2xs ${
+                                textColorMode === 'auto'
+                                  ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                              }`}
+                            >
+                              <span>✦ Otomatis</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTextColorModeChange(selectedIndex, 'dark')}
+                              className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border shadow-2xs ${
+                                textColorMode === 'dark'
+                                  ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                              }`}
+                              title="Teks hitam/gelap untuk latar belakang putih atau terang"
+                            >
+                              <span>☀️ Teks Gelap</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTextColorModeChange(selectedIndex, 'light')}
+                              className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border shadow-2xs ${
+                                textColorMode === 'light'
+                                  ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                              }`}
+                              title="Teks putih terang untuk latar belakang gelap atau pekat"
+                            >
+                              <span>🌙 Teks Terang</span>
+                            </button>
                           </div>
                         </div>
                       </div>
+                    );
+                  })()}
+
+                  {/* FORM KONTEN TEKS (DISEMBUNYIKAN UNTUK PROMO KARENA KONTEN TERPUSAT DARI MENU PROMOSI) */}
+                  {activeSection.type !== 'promos' && (
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Pengaturan Teks & Konten
+                        </label>
+                      </div>
+
+                      {/* PERATAAN TEKS (ALIGNMENT: KIRI, TENGAH, KANAN) */}
+                      <div>
+                        {isHeroTwoColumn ? (
+                          <>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="block text-[11px] font-semibold text-slate-500">
+                                Tata Letak Kolom (Posisi Tulisan & Foto)
+                              </label>
+                              <span className="text-[10px] font-bold text-blue-600">
+                                {activeSection.text_align === 'right'
+                                  ? 'Rata Kanan (Tulisan Kanan, Foto Kiri)'
+                                  : 'Rata Kiri (Tulisan Kiri, Foto Kanan)'}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => handleTextAlignChange(selectedIndex, 'left')}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                  (activeSection.text_align || 'left') !== 'right'
+                                    ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                }`}
+                              >
+                                <AlignLeft className="w-3.5 h-3.5" />
+                                <span>Rata Kiri (Teks di Kiri)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTextAlignChange(selectedIndex, 'right')}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                  activeSection.text_align === 'right'
+                                    ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                }`}
+                              >
+                                <AlignRight className="w-3.5 h-3.5" />
+                                <span>Rata Kanan (Teks di Kanan)</span>
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-blue-800 mt-1.5 flex items-center gap-1.5 bg-blue-50/70 border border-blue-100 px-2.5 py-1.5 rounded-lg">
+                              <Info className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                              <span>
+                                Khusus tata letak 2 kolom: <strong>Rata Kanan</strong> menempatkan tulisan di kolom kanan dan foto/banner di kolom kiri.
+                              </span>
+                            </p>
+                          </>
+                        ) : isCatalog ? (
+                          <>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="block text-[11px] font-semibold text-slate-500">
+                                Tata Letak Judul & Filter Kategori
+                              </label>
+                              <span className="text-[10px] font-bold text-blue-600">
+                                {activeSection.text_align === 'right'
+                                  ? 'Rata Kanan (Judul Kanan, Filter Kiri)'
+                                  : 'Rata Kiri (Judul Kiri, Filter Kanan)'}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => handleTextAlignChange(selectedIndex, 'left')}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                  (activeSection.text_align || 'left') !== 'right'
+                                    ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                }`}
+                              >
+                                <AlignLeft className="w-3.5 h-3.5" />
+                                <span>Rata Kiri (Judul Kiri, Filter Kanan)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTextAlignChange(selectedIndex, 'right')}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                  activeSection.text_align === 'right'
+                                    ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                }`}
+                              >
+                                <AlignRight className="w-3.5 h-3.5" />
+                                <span>Rata Kanan (Judul Kanan, Filter Kiri)</span>
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-blue-800 mt-1.5 flex items-center gap-1.5 bg-blue-50/70 border border-blue-100 px-2.5 py-1.5 rounded-lg">
+                              <Info className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                              <span>
+                                Khusus section produk: <strong>Rata Kanan</strong> menempatkan judul & subjudul di kanan, dan tombol filter kategori di kiri.
+                              </span>
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            {(() => {
+                              const currentAlign =
+                                activeSection.text_align ||
+                                (activeSection.type === 'hero' && activeSection.variant === 'bg-full' ? 'center' : 'left');
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block text-[11px] font-semibold text-slate-500">
+                                      Posisi / Perataan Judul & Subjudul
+                                    </label>
+                                    <span className="text-[10px] font-bold text-blue-600">
+                                      {currentAlign === 'center'
+                                        ? 'Rata Tengah (Center)'
+                                        : currentAlign === 'right'
+                                        ? 'Rata Kanan (Right)'
+                                        : 'Rata Kiri (Left)'}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTextAlignChange(selectedIndex, 'left')}
+                                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                        currentAlign === 'left'
+                                          ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                      }`}
+                                    >
+                                      <AlignLeft className="w-3.5 h-3.5" />
+                                      <span>Rata Kiri</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTextAlignChange(selectedIndex, 'center')}
+                                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                        currentAlign === 'center'
+                                          ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                      }`}
+                                    >
+                                      <AlignCenter className="w-3.5 h-3.5" />
+                                      <span>Rata Tengah</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTextAlignChange(selectedIndex, 'right')}
+                                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                                        currentAlign === 'right'
+                                          ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                      }`}
+                                    >
+                                      <AlignRight className="w-3.5 h-3.5" />
+                                      <span>Rata Kanan</span>
+                                    </button>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                          Judul Bagian (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          value={activeSection.title}
+                          onChange={(e) => handleTitleChange(selectedIndex, e.target.value)}
+                          placeholder={`Masukkan judul untuk bagian ${activeMeta.name}...`}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                          Subjudul / Keterangan Deskripsi
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={activeSection.subtitle}
+                          onChange={(e) => handleSubtitleChange(selectedIndex, e.target.value)}
+                          placeholder="Masukkan deskripsi penjelas bagian ini..."
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                        />
+                      </div>
                     </div>
                   )}
-
-                  {/* FORM KONTEN TEKS */}
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Pengaturan Teks & Konten
-                      </label>
-                    </div>
-
-                    {/* PERATAAN TEKS (ALIGNMENT: KIRI, TENGAH, KANAN) */}
-                    <div>
-                      {isHeroTwoColumn ? (
-                        <>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <label className="block text-[11px] font-semibold text-slate-500">
-                              Tata Letak Kolom (Posisi Tulisan & Foto)
-                            </label>
-                            <span className="text-[10px] font-bold text-blue-600">
-                              {activeSection.text_align === 'right'
-                                ? 'Rata Kanan (Tulisan Kanan, Foto Kiri)'
-                                : 'Rata Kiri (Tulisan Kiri, Foto Kanan)'}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
-                            <button
-                              type="button"
-                              onClick={() => handleTextAlignChange(selectedIndex, 'left')}
-                              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                (activeSection.text_align || 'left') !== 'right'
-                                  ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                              }`}
-                            >
-                              <AlignLeft className="w-3.5 h-3.5" />
-                              <span>Rata Kiri (Teks di Kiri)</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTextAlignChange(selectedIndex, 'right')}
-                              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                activeSection.text_align === 'right'
-                                  ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                              }`}
-                            >
-                              <AlignRight className="w-3.5 h-3.5" />
-                              <span>Rata Kanan (Teks di Kanan)</span>
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-blue-800 mt-1.5 flex items-center gap-1.5 bg-blue-50/70 border border-blue-100 px-2.5 py-1.5 rounded-lg">
-                            <Info className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                            <span>
-                              Khusus tata letak 2 kolom: <strong>Rata Kanan</strong> menempatkan tulisan di kolom kanan dan foto/banner di kolom kiri.
-                            </span>
-                          </p>
-                        </>
-                      ) : isCatalog ? (
-                        <>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <label className="block text-[11px] font-semibold text-slate-500">
-                              Tata Letak Judul & Filter Kategori
-                            </label>
-                            <span className="text-[10px] font-bold text-blue-600">
-                              {activeSection.text_align === 'right'
-                                ? 'Rata Kanan (Judul Kanan, Filter Kiri)'
-                                : 'Rata Kiri (Judul Kiri, Filter Kanan)'}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
-                            <button
-                              type="button"
-                              onClick={() => handleTextAlignChange(selectedIndex, 'left')}
-                              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                (activeSection.text_align || 'left') !== 'right'
-                                  ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                              }`}
-                            >
-                              <AlignLeft className="w-3.5 h-3.5" />
-                              <span>Rata Kiri (Judul Kiri, Filter Kanan)</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTextAlignChange(selectedIndex, 'right')}
-                              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                activeSection.text_align === 'right'
-                                  ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                              }`}
-                            >
-                              <AlignRight className="w-3.5 h-3.5" />
-                              <span>Rata Kanan (Judul Kanan, Filter Kiri)</span>
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-blue-800 mt-1.5 flex items-center gap-1.5 bg-blue-50/70 border border-blue-100 px-2.5 py-1.5 rounded-lg">
-                            <Info className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                            <span>
-                              Khusus section produk: <strong>Rata Kanan</strong> menempatkan judul & subjudul di kanan, dan tombol filter kategori di kiri.
-                            </span>
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          {(() => {
-                            const currentAlign =
-                              activeSection.text_align ||
-                              (activeSection.type === 'hero' && activeSection.variant === 'bg-full' ? 'center' : 'left');
-                            return (
-                              <>
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <label className="block text-[11px] font-semibold text-slate-500">
-                                    Posisi / Perataan Judul & Subjudul
-                                  </label>
-                                  <span className="text-[10px] font-bold text-blue-600">
-                                    {currentAlign === 'center'
-                                      ? 'Rata Tengah (Center)'
-                                      : currentAlign === 'right'
-                                      ? 'Rata Kanan (Right)'
-                                      : 'Rata Kiri (Left)'}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTextAlignChange(selectedIndex, 'left')}
-                                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                      currentAlign === 'left'
-                                        ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                                    }`}
-                                  >
-                                    <AlignLeft className="w-3.5 h-3.5" />
-                                    <span>Rata Kiri</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTextAlignChange(selectedIndex, 'center')}
-                                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                      currentAlign === 'center'
-                                        ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                                    }`}
-                                  >
-                                    <AlignCenter className="w-3.5 h-3.5" />
-                                    <span>Rata Tengah</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTextAlignChange(selectedIndex, 'right')}
-                                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                                      currentAlign === 'right'
-                                        ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                                    }`}
-                                  >
-                                    <AlignRight className="w-3.5 h-3.5" />
-                                    <span>Rata Kanan</span>
-                                  </button>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                        Judul Bagian (Opsional)
-                      </label>
-                      <input
-                        type="text"
-                        value={activeSection.title}
-                        onChange={(e) => handleTitleChange(selectedIndex, e.target.value)}
-                        placeholder={`Masukkan judul untuk bagian ${activeMeta.name}...`}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                        Subjudul / Keterangan Deskripsi
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={activeSection.subtitle}
-                        onChange={(e) => handleSubtitleChange(selectedIndex, e.target.value)}
-                        placeholder="Masukkan deskripsi penjelas bagian ini..."
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                      />
-                    </div>
-                  </div>
 
                   {/* PILIHAN VARIAN TAMPILAN INTERAKTIF */}
                   <div className="space-y-3 pt-2">
@@ -1982,6 +2234,306 @@ export const SectionBuilderPage: React.FC = () => {
                       })}
                     </div>
                   </div>
+
+                  {/* PENGATURAN HUBUNGKAN DENGAN KAMPANYE PROMO */}
+                  {activeSection.type === 'promos' && (
+                    <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white p-4 sm:p-5 shadow-xs space-y-3.5">
+                      <div className="flex items-center justify-between pb-2.5 border-b border-blue-200/80">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                            <BadgePercent className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                              Sumber Data & Konten Promo (Terpusat)
+                            </h4>
+                            <p className="text-[11px] text-slate-500">
+                              Judul promo, deskripsi, diskon, dan kode kupon otomatis disinkronkan dari Menu Promosi.
+                            </p>
+                          </div>
+                        </div>
+                        <Link
+                          to="/dashboard/promos"
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-white px-2.5 py-1.5 rounded-lg border border-blue-200 shadow-2xs hover:bg-blue-50 transition-colors"
+                        >
+                          <span>Buka Menu Promo</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Pilih Campaign Promo yang Ditampilkan:
+                        </label>
+                        <select
+                          value={activeSection.promotion_id || 'manual'}
+                          onChange={(e) => handleLinkPromotion(selectedIndex, e.target.value)}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
+                        >
+                          <option value="manual">Pilih Otomatis (Promo Aktif Pertama)</option>
+                          {promotions.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.title} ({p.type === 'countdown' ? 'Flash Sale' : p.type === 'coupon' ? 'Kupon' : 'Diskon'}) - {p.is_active ? '🟢 Aktif' : '⚪ Nonaktif'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {(() => {
+                        const linked = activeSection.promotion_id && activeSection.promotion_id !== 'manual'
+                          ? promotions.find(p => p.id === activeSection.promotion_id)
+                          : promotions.find(p => p.is_active) || promotions[0];
+                        if (!linked) return null;
+                        return (
+                          <div className="p-3 bg-white rounded-xl border border-blue-100/90 shadow-2xs space-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                                {linked.type === 'countdown' ? 'Flash Sale Countdown' : linked.type === 'coupon' ? 'Kupon Voucher' : 'Diskon Spesial'}
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-mono">
+                                ID: {linked.id}
+                              </span>
+                            </div>
+                            <div>
+                              <strong className="block text-slate-900 font-bold text-xs">{linked.title}</strong>
+                              <p className="text-slate-500 text-[11px] leading-relaxed mt-0.5">{linked.subtitle}</p>
+                            </div>
+                            <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                              <span className="text-emerald-700 font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Tersinkronisasi otomatis dengan website publik
+                              </span>
+                              <Link
+                                to="/dashboard/promos"
+                                className="font-bold text-orange-600 hover:text-orange-700 underline"
+                              >
+                                Edit di Menu Promo →
+                              </Link>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* PENGATURAN KHUSUS HITUNG MUNDUR PROMO (COUNTDOWN TIMER) */}
+                  {activeSection.type === 'promos' && activeSection.variant === 'full-banner' && (
+                    <div className="rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-white p-4 sm:p-5 shadow-xs space-y-4">
+                      <div className="flex items-center justify-between pb-2.5 border-b border-amber-200">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-xs">
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                              Pengaturan Waktu Hitung Mundur (Hari, Jam & Menit)
+                            </h4>
+                            <p className="text-[11px] text-slate-500">
+                              {activeSection.promotion_id && activeSection.promotion_id !== 'manual'
+                                ? 'Durasi hitung mundur disinkronkan langsung dari kampanye promo terpilih.'
+                                : 'Tentukan durasi promo diskon yang berjalan mundur secara real-time di storefront.'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 border border-orange-200">
+                          Countdown Live
+                        </span>
+                      </div>
+
+                      {activeSection.promotion_id && activeSection.promotion_id !== 'manual' ? (
+                        <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span>
+                              Menggunakan waktu hitung mundur dari campaign: <strong>{promotions.find(p => p.id === activeSection.promotion_id)?.title || 'Promo Aktif'}</strong>
+                            </span>
+                          </div>
+                          <Link to="/dashboard/promos" className="font-bold text-orange-600 hover:text-orange-700 underline flex-shrink-0">
+                            Kelola Durasi Promo
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          {/* 3 Inputs: Hari, Jam, Menit */}
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                              Sisa Durasi Waktu Flash Sale (Manual)
+                            </label>
+                            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                              {/* Hari */}
+                              <div className="bg-white rounded-xl border border-slate-200 p-2.5 shadow-2xs focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+                                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                  Hari (Days)
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={365}
+                                    value={activeSection.countdown_days ?? 2}
+                                    onChange={(e) =>
+                                      handlePromoFieldChange(
+                                        selectedIndex,
+                                        'countdown_days',
+                                        Math.max(0, parseInt(e.target.value) || 0)
+                                      )
+                                    }
+                                    className="w-full text-base sm:text-lg font-black font-mono text-slate-900 bg-transparent focus:outline-none"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-400">Hari</span>
+                                </div>
+                              </div>
+
+                              {/* Jam */}
+                              <div className="bg-white rounded-xl border border-slate-200 p-2.5 shadow-2xs focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+                                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                  Jam (Hours)
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={23}
+                                    value={activeSection.countdown_hours ?? 14}
+                                    onChange={(e) =>
+                                      handlePromoFieldChange(
+                                        selectedIndex,
+                                        'countdown_hours',
+                                        Math.min(23, Math.max(0, parseInt(e.target.value) || 0))
+                                      )
+                                    }
+                                    className="w-full text-base sm:text-lg font-black font-mono text-slate-900 bg-transparent focus:outline-none"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-400">Jam</span>
+                                </div>
+                              </div>
+
+                              {/* Menit */}
+                              <div className="bg-white rounded-xl border border-slate-200 p-2.5 shadow-2xs focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+                                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                  Menit (Mins)
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={59}
+                                    value={activeSection.countdown_minutes ?? 37}
+                                    onChange={(e) =>
+                                      handlePromoFieldChange(
+                                        selectedIndex,
+                                        'countdown_minutes',
+                                        Math.min(59, Math.max(0, parseInt(e.target.value) || 0))
+                                      )
+                                    }
+                                    className="w-full text-base sm:text-lg font-black font-mono text-slate-900 bg-transparent focus:outline-none"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-400">Mnt</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Preset Cepat */}
+                          <div>
+                            <span className="block text-[11px] font-semibold text-slate-500 mb-1.5">
+                              Preset Durasi Cepat:
+                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handlePromoFieldChange(selectedIndex, 'countdown_days', 2);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_hours', 14);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_minutes', 37);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-all shadow-2xs"
+                              >
+                                2 Hari 14 Jam
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handlePromoFieldChange(selectedIndex, 'countdown_days', 3);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_hours', 0);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_minutes', 0);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-all shadow-2xs"
+                              >
+                                3 Hari
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handlePromoFieldChange(selectedIndex, 'countdown_days', 1);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_hours', 0);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_minutes', 0);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-all shadow-2xs"
+                              >
+                                24 Jam (1 Hari)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handlePromoFieldChange(selectedIndex, 'countdown_days', 0);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_hours', 12);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_minutes', 0);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-all shadow-2xs"
+                              >
+                                12 Jam
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handlePromoFieldChange(selectedIndex, 'countdown_days', 0);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_hours', 6);
+                                  handlePromoFieldChange(selectedIndex, 'countdown_minutes', 0);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-all shadow-2xs"
+                              >
+                                6 Jam
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Badge & Button Customization */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-amber-200/80">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Label Tag Promo (Badge Atas)
+                          </label>
+                          <input
+                            type="text"
+                            value={activeSection.promo_badge ?? 'Limited Time Offer'}
+                            onChange={(e) =>
+                              handlePromoFieldChange(selectedIndex, 'promo_badge', e.target.value)
+                            }
+                            placeholder="Contoh: Limited Time Offer"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Teks Tombol Aksi (CTA Button)
+                          </label>
+                          <input
+                            type="text"
+                            value={activeSection.promo_button_text ?? 'Shop The Sale'}
+                            onChange={(e) =>
+                              handlePromoFieldChange(selectedIndex, 'promo_button_text', e.target.value)
+                            }
+                            placeholder="Contoh: Shop The Sale"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* LIVE VISUAL MOCKUP PREVIEW */}
                   <div className="pt-2 space-y-2.5">

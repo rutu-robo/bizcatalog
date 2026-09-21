@@ -58,6 +58,7 @@ export interface Product {
   category: string;
   image_url: string;
   status: 'published' | 'draft';
+  stock?: number;
   created_at: string;
   updated_at: string;
 }
@@ -98,6 +99,43 @@ export interface SectionConfig {
   bg_color?: string;
   bg_image_url?: string;
   text_align?: 'left' | 'center' | 'right';
+  countdown_days?: number;
+  countdown_hours?: number;
+  countdown_minutes?: number;
+  countdown_end?: string;
+  promo_badge?: string;
+  promo_button_text?: string;
+  promo_button_link?: string;
+  promotion_id?: string;
+  text_color_mode?: 'auto' | 'light' | 'dark';
+  overlay_opacity?: number;
+}
+
+export type PromoType = 'countdown' | 'coupon' | 'discount';
+export type PromoTargetType = 'all' | 'category' | 'products';
+
+export interface Promotion {
+  id: string;
+  website_id: string;
+  title: string;
+  subtitle?: string;
+  type: PromoType;
+  code?: string;
+  discount_percent?: number;
+  discount_amount?: number;
+  min_spend?: number;
+  countdown_days?: number;
+  countdown_hours?: number;
+  countdown_minutes?: number;
+  badge?: string;
+  button_text?: string;
+  button_link?: string;
+  target_type: PromoTargetType;
+  target_category?: string;
+  product_ids?: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Testimonial {
@@ -106,7 +144,7 @@ export interface Testimonial {
   client_name: string;
   role_or_company: string;
   feedback: string;
-  rating: number;
+  rating: number; // 1 - 5
   avatar_url: string;
   created_at: string;
 }
@@ -128,6 +166,7 @@ export interface PublicWebsiteData {
   testimonials: Testimonial[];
   galleries: GalleryItem[];
   assets: Asset[];
+  promotions?: Promotion[];
 }
 
 export interface AuthResponse {

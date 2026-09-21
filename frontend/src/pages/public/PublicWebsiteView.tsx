@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
-import { PublicWebsiteData, Product } from '../../types';
+import { PublicWebsiteData, Product, SectionConfig } from '../../types';
 import { THEMES } from '../../themes';
 import {
   MessageCircle,
@@ -32,29 +32,15 @@ import {
   Sparkles,
   Award,
   CheckCircle2,
-  BadgePercent
+  BadgePercent,
+  Flame
 } from 'lucide-react';
 import { InstagramIcon, FacebookIcon } from '../../components/Icons';
 import { useCartStore } from '../../store/cartStore';
 import { CartDrawer } from '../../components/cart/CartDrawer';
-
-const isColorDark = (hex?: string): boolean => {
-  if (!hex) return false;
-  const cleanHex = hex.replace('#', '');
-  if (cleanHex.length === 3) {
-    const r = parseInt(cleanHex[0] + cleanHex[0], 16);
-    const g = parseInt(cleanHex[1] + cleanHex[1], 16);
-    const b = parseInt(cleanHex[2] + cleanHex[2], 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
-  }
-  if (cleanHex.length === 6) {
-    const r = parseInt(cleanHex.substring(0, 2), 16);
-    const g = parseInt(cleanHex.substring(2, 4), 16);
-    const b = parseInt(cleanHex.substring(4, 6), 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
-  }
-  return false;
-};
+import { Promotion } from '../../types';
+import { getProductPromoInfo } from '../../utils/promo';
+import { resolveContrastTokens, isColorDark } from '../../utils/contrast';
 
 interface CategoryScrollContainerProps {
   children: React.ReactNode;
@@ -207,6 +193,157 @@ const CategoryScrollContainer: React.FC<CategoryScrollContainerProps> = ({ child
   );
 };
 
+const PromoCountdownBanner: React.FC<{
+  sec: SectionConfig;
+  isOverlayHeader: boolean;
+  isFirstSection: boolean;
+  productsUrl: string;
+  linkedPromo?: Promotion | null;
+}> = ({ sec, isOverlayHeader, isFirstSection, productsUrl, linkedPromo }) => {
+  const initialDays = linkedPromo?.countdown_days ?? (typeof sec.countdown_days === 'number' ? sec.countdown_days : 2);
+  const initialHours = linkedPromo?.countdown_hours ?? (typeof sec.countdown_hours === 'number' ? sec.countdown_hours : 14);
+  const initialMinutes = linkedPromo?.countdown_minutes ?? (typeof sec.countdown_minutes === 'number' ? sec.countdown_minutes : 37);
+
+  // Calculate total seconds remaining
+  const initialTotalSeconds = React.useMemo(() => {
+    return initialDays * 86400 + initialHours * 3600 + initialMinutes * 60 + 59;
+  }, [initialDays, initialHours, initialMinutes]);
+
+  const [totalSeconds, setTotalSeconds] = useState(initialTotalSeconds);
+
+  useEffect(() => {
+    setTotalSeconds(initialTotalSeconds);
+  }, [initialTotalSeconds]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTotalSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const badge = linkedPromo?.badge || sec.promo_badge || 'Limited Time Offer';
+  const title = linkedPromo?.title || sec.title || 'Super Sale Up To 50% Off!';
+  const subtitle = linkedPromo?.subtitle || sec.subtitle || 'On selected items. Shop now before the deal ends.';
+  const buttonText = linkedPromo?.button_text || sec.promo_button_text || 'Shop The Sale';
+  const buttonLink = linkedPromo?.button_link || sec.promo_button_link || '#katalog';
+  const targetUrl = buttonLink === '#katalog' ? `${productsUrl}?promo=true` : buttonLink;
+
+  const hasBgImage = !!sec.bg_image_url;
+  const overlayOp = sec.overlay_opacity ?? 70;
+  const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode, hasBgImage);
+
+  return (
+    <section
+      id="promo"
+      key={sec.id}
+      style={{ backgroundColor: sec.bg_color || undefined }}
+      className={`${
+        isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'
+      } border-b ${tokens.borderClass}`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div
+          className={`border rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8 transition-colors ${
+            hasBgImage
+              ? 'border-white/20 text-white'
+              : tokens.isDark
+              ? 'bg-[#121212] border-neutral-800/90 text-white'
+              : 'bg-white border-slate-200 text-slate-900 shadow-lg'
+          }`}
+          style={{
+            backgroundImage: hasBgImage
+              ? `linear-gradient(rgba(0,0,0,${overlayOp / 100}), rgba(0,0,0,${overlayOp / 100})), url("${sec.bg_image_url}")`
+              : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          {/* Subtle ambient lighting jika tidak ada foto */}
+          {!hasBgImage && (
+            <>
+              <div className="absolute -left-20 -top-20 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+            </>
+          )}
+
+          {/* Left Text */}
+          <div className="space-y-1.5 max-w-xl text-center lg:text-left z-10">
+            <span className="text-orange-500 text-xs font-black tracking-widest uppercase block">
+              {badge}
+            </span>
+            <h2 className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight ${hasBgImage || tokens.isDark ? 'text-white' : 'text-slate-900'}`}>
+              {title}
+            </h2>
+            <p className={`text-xs sm:text-sm leading-relaxed mt-1 ${hasBgImage || tokens.isDark ? 'text-neutral-300' : 'text-slate-600'}`}>
+              {subtitle}
+            </p>
+          </div>
+
+          {/* Center & Right: 4 Countdown Cards & Orange CTA Button */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 flex-shrink-0 z-10 w-full sm:w-auto justify-center">
+            {/* 4 Countdown Boxes */}
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+              {/* Days */}
+              <div className={`${hasBgImage || tokens.isDark ? 'bg-[#1a1a1a]/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 min-w-[58px] sm:min-w-[68px] shadow-inner`}>
+                <span className={`text-xl sm:text-2xl lg:text-3xl font-black font-mono block ${hasBgImage || tokens.isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {String(days).padStart(2, '0')}
+                </span>
+                <span className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mt-0.5 ${hasBgImage || tokens.isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                  Days
+                </span>
+              </div>
+
+              {/* Hours */}
+              <div className={`${hasBgImage || tokens.isDark ? 'bg-[#1a1a1a]/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 min-w-[58px] sm:min-w-[68px] shadow-inner`}>
+                <span className={`text-xl sm:text-2xl lg:text-3xl font-black font-mono block ${hasBgImage || tokens.isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {String(hours).padStart(2, '0')}
+                </span>
+                <span className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mt-0.5 ${hasBgImage || tokens.isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                  Hours
+                </span>
+              </div>
+
+              {/* Mins */}
+              <div className={`${hasBgImage || tokens.isDark ? 'bg-[#1a1a1a]/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 min-w-[58px] sm:min-w-[68px] shadow-inner`}>
+                <span className={`text-xl sm:text-2xl lg:text-3xl font-black font-mono block ${hasBgImage || tokens.isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {String(minutes).padStart(2, '0')}
+                </span>
+                <span className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mt-0.5 ${hasBgImage || tokens.isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                  Mins
+                </span>
+              </div>
+
+              {/* Secs */}
+              <div className={`${hasBgImage || tokens.isDark ? 'bg-[#1a1a1a]/90 border-neutral-800' : 'bg-slate-100 border-slate-200'} border rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 min-w-[58px] sm:min-w-[68px] shadow-inner`}>
+                <span className="text-xl sm:text-2xl lg:text-3xl font-black font-mono block text-orange-500">
+                  {String(seconds).padStart(2, '0')}
+                </span>
+                <span className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mt-0.5 ${hasBgImage || tokens.isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                  Secs
+                </span>
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <a
+              href={targetUrl}
+              className="w-full sm:w-auto text-center px-6 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-orange-500/20 transition-all hover:scale-105 whitespace-nowrap"
+            >
+              {buttonText}
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 export const PublicWebsiteView: React.FC = () => {
   const params = useParams<{ subdomain?: string }>();
   
@@ -226,6 +363,15 @@ export const PublicWebsiteView: React.FC = () => {
 
   const navigate = useNavigate();
   const subdomain = getSubdomain();
+  const host = window.location.hostname;
+  const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+  const isSubdomainHost =
+    !isIp &&
+    host.includes('bizcatalog.com') &&
+    host.split('.').length > 2 &&
+    !['www', 'app', 'admin'].includes(host.split('.')[0]);
+  const productsUrl = isSubdomainHost ? '/products' : `/site/${subdomain}/products`;
+
   const [data, setData] = useState<PublicWebsiteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -667,7 +813,8 @@ export const PublicWebsiteView: React.FC = () => {
               }
 
               // Default: 'split'
-              const isDarkBg = isColorDark(sec.bg_color);
+              const heroTokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+              const isDarkBg = heroTokens.isDark;
 
               const isRight = sec.text_align === 'right';
 
@@ -679,7 +826,7 @@ export const PublicWebsiteView: React.FC = () => {
                 <section
                   key={sec.id}
                   style={{ backgroundColor: sec.bg_color || undefined }}
-                  className={`${sectionPadding} border-b ${theme.borderClass} ${isDarkBg ? 'text-white' : ''}`}
+                  className={`${sectionPadding} border-b ${heroTokens.borderClass} ${isDarkBg ? 'text-white' : ''}`}
                 >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10 sm:gap-14 items-center">
@@ -687,10 +834,10 @@ export const PublicWebsiteView: React.FC = () => {
                       <span className={theme.badgeClass}>
                         {website.tagline || 'Katalog Resmi'}
                       </span>
-                      <h1 className={`text-3xl sm:text-5xl ${isDarkBg ? 'text-white' : theme.headingClass} font-black leading-[1.15]`}>
+                      <h1 className={`text-3xl sm:text-5xl ${heroTokens.headingText} font-black leading-[1.15]`}>
                         {sec.title || website.business_name}
                       </h1>
-                      <p className={`text-sm sm:text-base ${isDarkBg ? 'text-slate-200' : theme.textClass} leading-relaxed`}>
+                      <p className={`text-sm sm:text-base ${heroTokens.bodyText} leading-relaxed`}>
                         {sec.subtitle || website.description}
                       </p>
                       <div className="flex flex-wrap gap-3 pt-2">
@@ -752,84 +899,95 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'promos': {
-            const coupons = [
-              { code: 'HEMAT10', discount: '10% OFF', desc: 'Potongan 10% untuk pesanan Anda', minSpend: 'Min. Belanja Rp 1.000.000' },
-              { code: 'ONGKIRFREE', discount: 'GRATIS ONGKIR', desc: 'Subsidi ongkos kirim hingga Rp 100.000', minSpend: 'Khusus pesanan via website' },
-              { code: 'SUPERDEAL', discount: 'CASHBACK 50RB', desc: 'Potongan langsung Rp 50.000 saat checkout', minSpend: 'Tanpa minimum belanja' },
-            ];
+            const allPromotions = data.promotions || [];
+            const linkedPromo = sec.promotion_id
+              ? allPromotions.find((p) => p.id === sec.promotion_id)
+              : null;
 
             if (sec.variant === 'full-banner') {
-              return (
-                <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b border-slate-200/60`}>
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 rounded-3xl p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-                      <div className="space-y-3 max-w-xl text-center md:text-left">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
-                          <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                          <span>Flash Sale E-Commerce Hari Ini</span>
-                        </div>
-                        <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                          {sec.title || 'Diskon Kilat Terbatas!'}
-                        </h2>
-                        <p className="text-rose-100 text-xs sm:text-sm leading-relaxed mt-1">
-                          {sec.subtitle || 'Dapatkan potongan harga spesial dan penawaran terbaik hari ini sebelum waktu promo habis.'}
-                        </p>
-                      </div>
+              const countdownPromo =
+                linkedPromo ||
+                allPromotions.find((p) => p.type === 'countdown' && p.is_active);
 
-                      <div className="flex flex-col items-center gap-4 flex-shrink-0">
-                        <span className="text-xs font-semibold tracking-wider uppercase text-amber-200">
-                          Waktu Promo Tersisa:
-                        </span>
-                        <div className="flex items-center gap-2 sm:gap-3 text-slate-900 font-mono font-black">
-                          <div className="bg-white rounded-2xl p-3 sm:p-4 text-center min-w-[64px] shadow-lg">
-                            <span className="text-2xl sm:text-3xl font-black block">{String(countdown.hours).padStart(2, '0')}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Jam</span>
-                          </div>
-                          <span className="text-2xl font-bold text-white">:</span>
-                          <div className="bg-white rounded-2xl p-3 sm:p-4 text-center min-w-[64px] shadow-lg">
-                            <span className="text-2xl sm:text-3xl font-black block">{String(countdown.minutes).padStart(2, '0')}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Menit</span>
-                          </div>
-                          <span className="text-2xl font-bold text-white">:</span>
-                          <div className="bg-white rounded-2xl p-3 sm:p-4 text-center min-w-[64px] shadow-lg">
-                            <span className="text-2xl sm:text-3xl font-black block text-red-600">{String(countdown.seconds).padStart(2, '0')}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Detik</span>
-                          </div>
-                        </div>
-                        <a
-                          href="#katalog"
-                          className="w-full text-center px-6 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm shadow-xl transition-transform hover:scale-105"
-                        >
-                          Serbu Promo Sekarang
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </section>
+              return (
+                <PromoCountdownBanner
+                  key={sec.id}
+                  sec={sec}
+                  isOverlayHeader={isOverlayHeader}
+                  isFirstSection={isFirstSection}
+                  productsUrl={productsUrl}
+                  linkedPromo={countdownPromo}
+                />
               );
             }
 
             if (sec.variant === 'split-card') {
-              const isDarkBg = isColorDark(sec.bg_color);
+              const hasBgImage = !!sec.bg_image_url;
+              const overlayOp = sec.overlay_opacity ?? 60;
+              const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode, hasBgImage);
+              const isDark = hasBgImage || tokens.isDark;
+
+              const discountPromo =
+                linkedPromo ||
+                allPromotions.find((p) => p.type === 'discount' && p.is_active) ||
+                allPromotions[0];
+
+              const promoTitle = discountPromo?.title || 'Hemat Belanja dengan Voucher Eksklusif';
+              const promoSubtitle = discountPromo?.subtitle || 'Pilih produk favorit Anda, masukkan ke keranjang belanja, dan gunakan voucher diskon saat checkout untuk harga paling hemat!';
+              const badgeText = discountPromo?.badge || 'Penawaran Terbatas';
+              const discountVal = discountPromo?.discount_percent ? `${discountPromo.discount_percent}%` : '30%';
+              const targetDesc = discountPromo?.target_type === 'category'
+                ? `Khusus Kategori ${discountPromo.target_category}`
+                : discountPromo?.target_type === 'products'
+                ? 'Koleksi Produk Pilihan'
+                : 'Semua Produk Unggulan';
+              const codeText = discountPromo?.code || 'HEMAT10';
+
               return (
-                <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${theme.borderClass}`}>
+                <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${tokens.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
-                      <div className="space-y-3 max-w-xl">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
+                    <div
+                      className={`rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-8 transition-colors relative overflow-hidden ${
+                        hasBgImage
+                          ? 'border border-white/20 shadow-2xl text-white'
+                          : isDark
+                          ? 'border border-white/15 bg-white/10 backdrop-blur-md shadow-xl text-white'
+                          : 'border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white shadow-sm text-slate-900'
+                      }`}
+                      style={{
+                        backgroundImage: hasBgImage
+                          ? `linear-gradient(rgba(0,0,0,${overlayOp / 100}), rgba(0,0,0,${overlayOp / 100})), url("${sec.bg_image_url}")`
+                          : undefined,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    >
+                      {/* Subtle ambient lighting jika tidak ada foto */}
+                      {!hasBgImage && (
+                        <div className="absolute -left-16 -top-16 w-56 h-56 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                      )}
+
+                      <div className="space-y-3 max-w-xl z-10">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${
+                          hasBgImage
+                            ? 'text-orange-300 bg-black/40 border border-white/20 backdrop-blur-xs'
+                            : isDark
+                            ? 'text-orange-400 bg-white/10 border border-white/15'
+                            : 'text-blue-700 bg-blue-100'
+                        }`}>
                           <BadgePercent className="w-3.5 h-3.5" />
-                          <span>Penawaran Terbatas</span>
+                          <span>{badgeText}</span>
                         </span>
-                        <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
-                          {sec.title || 'Hemat Belanja dengan Voucher Eksklusif'}
+                        <h2 className={`text-xl sm:text-2xl font-black tracking-tight leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          {promoTitle}
                         </h2>
-                        <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1 leading-relaxed`}>
-                          {sec.subtitle || 'Pilih produk favorit Anda, masukkan ke keranjang belanja, dan gunakan voucher diskon saat checkout untuk harga paling hemat!'}
+                        <p className={`text-xs sm:text-sm mt-1 leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-600'}`}>
+                          {promoSubtitle}
                         </p>
                         <div className="pt-2">
                           <a
-                            href="#katalog"
-                            className={`${theme.buttonPrimary} inline-flex items-center gap-2 text-xs px-5 py-2 shadow-sm`}
+                            href={`${productsUrl}?promo=true`}
+                            className={`${theme.buttonPrimary} inline-flex items-center gap-2 text-xs px-5 py-2.5 shadow-sm`}
                           >
                             <span>Lihat Produk Promo</span>
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -837,12 +995,12 @@ export const PublicWebsiteView: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex-shrink-0 text-center p-6 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl min-w-[220px]">
+                      <div className="flex-shrink-0 text-center p-6 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl min-w-[220px] border border-white/15 z-10">
                         <span className="text-xs uppercase font-bold tracking-widest text-blue-200 block">Potongan Hingga</span>
-                        <span className="text-4xl font-black block my-1">30%</span>
-                        <span className="text-xs text-blue-100 block">Semua Produk Unggulan</span>
+                        <span className="text-4xl font-black block my-1">{discountVal}</span>
+                        <span className="text-xs text-blue-100 block">{targetDesc}</span>
                         <div className="mt-3 pt-3 border-t border-white/20 text-[11px] text-blue-200">
-                          Gunakan kode: <span className="font-mono font-bold text-white bg-white/20 px-2 py-0.5 rounded">HEMAT10</span>
+                          Gunakan kode: <span className="font-mono font-bold text-white bg-white/20 px-2 py-0.5 rounded">{codeText}</span>
                         </div>
                       </div>
                     </div>
@@ -852,19 +1010,35 @@ export const PublicWebsiteView: React.FC = () => {
             }
 
             // Default: 'coupon-ticket'
-            const isDarkBg = isColorDark(sec.bg_color);
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const activeCouponPromos = allPromotions.filter((p) => p.type === 'coupon' && p.is_active);
+            const coupons = activeCouponPromos.length > 0
+              ? activeCouponPromos.map((c) => ({
+                  code: c.code || 'HEMAT10',
+                  discount: c.badge || (c.discount_percent ? `${c.discount_percent}% OFF` : 'PROMO'),
+                  desc: c.subtitle || c.title,
+                  minSpend: c.min_spend ? `Min. Belanja Rp ${c.min_spend.toLocaleString('id-ID')}` : 'Tanpa minimum belanja',
+                }))
+              : [
+                  { code: 'HEMAT10', discount: '10% OFF', desc: 'Potongan 10% untuk pesanan Anda', minSpend: 'Min. Belanja Rp 1.000.000' },
+                  { code: 'ONGKIRFREE', discount: 'GRATIS ONGKIR', desc: 'Subsidi ongkos kirim hingga Rp 100.000', minSpend: 'Khusus pesanan via website' },
+                  { code: 'SUPERDEAL', discount: 'CASHBACK 50RB', desc: 'Potongan langsung Rp 50.000 saat checkout', minSpend: 'Tanpa minimum belanja' },
+                ];
+
             return (
-              <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${theme.borderClass}`}>
+              <section id="promo" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${tokens.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="text-center max-w-2xl mx-auto mb-6">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-3 py-1 rounded-full mb-2">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2 ${
+                      tokens.isDark ? 'text-orange-400 bg-white/10 border border-white/15' : 'text-blue-700 bg-blue-100'
+                    }`}>
                       <Tag className="w-3.5 h-3.5" />
                       <span>Kupon & Voucher Belanja</span>
                     </span>
-                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                    <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText}`}>
                       {sec.title || 'Klaim Voucher Diskon Hari Ini'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                    <p className={`text-xs sm:text-sm mt-1 ${tokens.bodyText}`}>
                       {sec.subtitle || 'Salin kode voucher di bawah dan nikmati potongan harga langsung saat Anda melakukan pemesanan.'}
                     </p>
                   </div>
@@ -875,7 +1049,7 @@ export const PublicWebsiteView: React.FC = () => {
                       return (
                         <div
                           key={c.code}
-                          className="relative rounded-2xl border-2 border-dashed border-blue-300 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 p-5 shadow-xs flex flex-col justify-between overflow-hidden group hover:border-blue-500 transition-colors"
+                          className="relative rounded-2xl border-2 border-dashed border-blue-300 bg-white p-5 shadow-sm flex flex-col justify-between overflow-hidden group hover:border-blue-500 transition-colors"
                         >
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -889,7 +1063,7 @@ export const PublicWebsiteView: React.FC = () => {
                           </div>
 
                           <div className="mt-4 pt-3 border-t border-dashed border-blue-200 flex items-center justify-between gap-2">
-                            <span className="font-mono font-extrabold text-sm text-blue-700 bg-white px-3 py-1 rounded-lg border border-blue-200">
+                            <span className="font-mono font-extrabold text-sm text-blue-700 bg-slate-50 px-3 py-1 rounded-lg border border-blue-200">
                               {c.code}
                             </span>
                             <button
@@ -920,26 +1094,28 @@ export const PublicWebsiteView: React.FC = () => {
                 </div>
               </section>
             );
+
           }
 
           case 'categories': {
             if (categories.length === 0) return null;
 
             const textAlign = sec.text_align || 'left';
-            const isDarkBg = isColorDark(sec.bg_color);
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const isDarkBg = tokens.isDark;
 
             return (
-              <section id="kategori" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-20 sm:pt-24 pb-6 sm:pb-7' : 'py-6 sm:py-7'} border-b ${theme.borderClass}`}>
+              <section id="kategori" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-20 sm:pt-24 pb-6 sm:pb-7' : 'py-6 sm:py-7'} border-b ${tokens.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   
                   {/* Title & Subtitle with Alignment Controls */}
                   {textAlign === 'center' ? (
                     <div className="relative mb-4 sm:mb-5 text-center">
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                      <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText}`}>
                         {sec.title || 'Kategori Pilihan'}
                       </h2>
                       {sec.subtitle && (
-                        <p className={`text-xs sm:text-sm ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} font-normal mt-1 max-w-xl mx-auto`}>
+                        <p className={`text-xs sm:text-sm font-normal mt-1 max-w-xl mx-auto ${tokens.bodyText}`}>
                           {sec.subtitle}
                         </p>
                       )}
@@ -968,11 +1144,11 @@ export const PublicWebsiteView: React.FC = () => {
                       ) : <div />}
                       <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5 text-right">
                         {sec.subtitle && (
-                          <span className={`text-xs sm:text-sm ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} font-normal order-2 sm:order-1`}>
+                          <span className={`text-xs sm:text-sm font-normal order-2 sm:order-1 ${tokens.bodyText}`}>
                             {sec.subtitle}<span className="hidden sm:inline"> •</span>
                           </span>
                         )}
-                        <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} order-1 sm:order-2`}>
+                        <h2 className={`text-xl sm:text-2xl font-black tracking-tight order-1 sm:order-2 ${tokens.headingText}`}>
                           {sec.title || 'Kategori Pilihan'}
                         </h2>
                       </div>
@@ -980,11 +1156,11 @@ export const PublicWebsiteView: React.FC = () => {
                   ) : (
                     <div className="flex items-center justify-between mb-4 sm:mb-5 gap-3">
                       <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5 text-left">
-                        <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                        <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText}`}>
                           {sec.title || 'Kategori Pilihan'}
                         </h2>
                         {sec.subtitle && (
-                          <span className={`text-xs sm:text-sm ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} font-normal`}>
+                          <span className={`text-xs sm:text-sm font-normal ${tokens.bodyText}`}>
                             <span className="hidden sm:inline">• </span>{sec.subtitle}
                           </span>
                         )}
@@ -1012,6 +1188,8 @@ export const PublicWebsiteView: React.FC = () => {
                         className={`px-4 py-2 rounded-full text-xs sm:text-[13px] font-semibold flex items-center gap-2 flex-shrink-0 transition-all ${
                           activeCategory === 'all'
                             ? `${theme.buttonPrimary} shadow-xs`
+                            : isDarkBg
+                            ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
                             : 'bg-slate-100/90 hover:bg-slate-200/90 text-slate-600 hover:text-slate-900 border border-slate-200/60'
                         }`}
                       >
@@ -1033,11 +1211,13 @@ export const PublicWebsiteView: React.FC = () => {
                             className={`px-4 py-2 rounded-full text-xs sm:text-[13px] font-semibold flex items-center gap-2 flex-shrink-0 transition-all ${
                               isActive
                                 ? `${theme.buttonPrimary} shadow-xs`
+                                : isDarkBg
+                                ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
                                 : 'bg-slate-100/90 hover:bg-slate-200/90 text-slate-600 hover:text-slate-900 border border-slate-200/60'
                             }`}
                           >
                             <span>{cat.name}</span>
-                            <span className="px-2 py-0.5 rounded-full bg-black/5 text-[11px] text-slate-500 font-bold">
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${isDarkBg ? 'bg-white/20 text-white' : 'bg-black/5 text-slate-500'}`}>
                               {count}
                             </span>
                           </button>
@@ -1054,15 +1234,17 @@ export const PublicWebsiteView: React.FC = () => {
                         className={`px-3.5 py-2.5 rounded-xl border cursor-pointer flex items-center gap-3 flex-shrink-0 transition-all ${
                           activeCategory === 'all'
                             ? 'border-blue-600 bg-blue-50/80 shadow-2xs'
-                            : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                            : isDarkBg
+                            ? 'border-white/15 hover:border-white/30 bg-white/10 hover:bg-white/15 text-white'
+                            : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/50 text-slate-800'
                         }`}
                       >
                         <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xs flex-shrink-0">
                           ALL
                         </div>
                         <div className="text-left">
-                          <div className="text-xs sm:text-sm font-bold text-slate-800 leading-tight">Semua</div>
-                          <div className="text-[11px] text-slate-400 leading-none mt-0.5">{products.length} produk</div>
+                          <div className={`text-xs sm:text-sm font-bold leading-tight ${isDarkBg ? 'text-white' : 'text-slate-800'}`}>Semua</div>
+                          <div className={`text-[11px] leading-none mt-0.5 ${isDarkBg ? 'text-slate-300' : 'text-slate-400'}`}>{products.length} produk</div>
                         </div>
                       </div>
 
@@ -1080,7 +1262,9 @@ export const PublicWebsiteView: React.FC = () => {
                             className={`px-3.5 py-2.5 rounded-xl border cursor-pointer flex items-center gap-3 flex-shrink-0 transition-all ${
                               isActive
                                 ? 'border-blue-600 bg-blue-50/80 shadow-2xs'
-                                : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                                : isDarkBg
+                                ? 'border-white/15 hover:border-white/30 bg-white/10 hover:bg-white/15 text-white'
+                                : 'border-slate-200/80 hover:border-slate-300 bg-white hover:bg-slate-50/50 text-slate-800'
                             }`}
                           >
                             <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 border border-slate-200/50 flex-shrink-0 flex items-center justify-center">
@@ -1091,8 +1275,8 @@ export const PublicWebsiteView: React.FC = () => {
                               )}
                             </div>
                             <div className="text-left">
-                              <div className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate max-w-[125px]">{cat.name}</div>
-                              <div className="text-[11px] text-slate-400 leading-none mt-0.5">{count} produk</div>
+                              <div className={`text-xs sm:text-sm font-bold leading-tight truncate max-w-[125px] ${isDarkBg ? 'text-white' : 'text-slate-800'}`}>{cat.name}</div>
+                              <div className={`text-[11px] leading-none mt-0.5 ${isDarkBg ? 'text-slate-300' : 'text-slate-400'}`}>{count} produk</div>
                             </div>
                           </div>
                         );
@@ -1112,6 +1296,8 @@ export const PublicWebsiteView: React.FC = () => {
                           className={`w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] rounded-full p-0.5 transition-all flex items-center justify-center ${
                             activeCategory === 'all'
                               ? 'ring-2 ring-blue-600 ring-offset-2 scale-105 shadow-xs'
+                              : isDarkBg
+                              ? 'border border-white/20 group-hover:border-blue-400'
                               : 'border border-slate-200 group-hover:border-blue-400'
                           }`}
                         >
@@ -1119,7 +1305,7 @@ export const PublicWebsiteView: React.FC = () => {
                             ALL
                           </div>
                         </div>
-                        <span className={`text-[11.5px] sm:text-xs text-center max-w-[76px] truncate leading-tight ${activeCategory === 'all' ? 'font-bold text-blue-600' : 'font-medium text-slate-600 group-hover:text-slate-900'}`}>
+                        <span className={`text-[11.5px] sm:text-xs text-center max-w-[76px] truncate leading-tight ${activeCategory === 'all' ? 'font-bold text-blue-600' : isDarkBg ? 'font-medium text-slate-200 group-hover:text-white' : 'font-medium text-slate-600 group-hover:text-slate-900'}`}>
                           Semua
                         </span>
                       </div>
@@ -1140,6 +1326,8 @@ export const PublicWebsiteView: React.FC = () => {
                               className={`w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] rounded-full p-0.5 transition-all overflow-hidden ${
                                 isActive
                                   ? 'ring-2 ring-blue-600 ring-offset-2 scale-105 shadow-xs'
+                                  : isDarkBg
+                                  ? 'border border-white/20 group-hover:border-blue-400'
                                   : 'border border-slate-200 group-hover:border-blue-400'
                               }`}
                             >
@@ -1151,7 +1339,7 @@ export const PublicWebsiteView: React.FC = () => {
                                 )}
                               </div>
                             </div>
-                            <span className={`text-[11.5px] sm:text-xs text-center max-w-[76px] truncate leading-tight ${isActive ? 'font-bold text-blue-600' : 'font-medium text-slate-600 group-hover:text-slate-900'}`}>
+                            <span className={`text-[11.5px] sm:text-xs text-center max-w-[76px] truncate leading-tight ${isActive ? 'font-bold text-blue-600' : isDarkBg ? 'font-medium text-slate-200 group-hover:text-white' : 'font-medium text-slate-600 group-hover:text-slate-900'}`}>
                               {cat.name}
                             </span>
                           </div>
@@ -1166,63 +1354,44 @@ export const PublicWebsiteView: React.FC = () => {
 
           case 'catalog': {
             const isRight = sec.text_align === 'right';
-            const isDarkBg = isColorDark(sec.bg_color);
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const isDarkBg = tokens.isDark;
+
             return (
-              <section id="katalog" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${theme.borderClass}`}>
+              <section id="katalog" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`${isOverlayHeader && isFirstSection ? 'pt-24 sm:pt-28 pb-8 sm:pb-10' : 'py-8 sm:py-10'} border-b ${tokens.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className={`flex flex-col sm:flex-row sm:items-end justify-between mb-5 sm:mb-6 gap-3 ${isRight ? 'sm:flex-row-reverse' : ''}`}>
                     <div className={isRight ? 'text-left sm:text-right flex flex-col sm:items-end' : 'text-left'}>
                       <span className={theme.badgeClass}>Showcase Produk</span>
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                      <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} mt-1`}>
                         {sec.title || 'Katalog Produk Pilihan'}
                       </h2>
-                      <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                      <p className={`text-xs sm:text-sm ${tokens.bodyText} mt-1`}>
                         {sec.subtitle || 'Temukan produk idaman Anda dan belanja langsung melalui website.'}
                       </p>
                     </div>
 
-                    {/* Inline Filter Chips */}
-                    {categories.length > 0 && (
-                      <div className={`flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs ${isRight ? 'justify-start sm:justify-start' : 'justify-start sm:justify-end'}`}>
-                        <button
-                          onClick={() => setActiveCategory('all')}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                            activeCategory === 'all'
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                          }`}
-                        >
-                          Semua ({products.length})
-                        </button>
-                        {categories.slice(0, 4).map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => setActiveCategory(c)}
-                            className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
-                              activeCategory === c
-                                ? 'bg-blue-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                            }`}
-                          >
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {/* Tombol Lihat Semuanya */}
+                    <button
+                      type="button"
+                      onClick={() => navigate(productsUrl)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all self-start sm:self-auto group"
+                    >
+                      <span>Lihat Semuanya</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
                   </div>
 
-                  {filteredProducts.length === 0 ? (
+                  {products.length === 0 ? (
                     <div className="text-center py-12 px-6 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 max-w-xl mx-auto my-4">
                       <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
                         <ShoppingBag className="w-6 h-6" />
                       </div>
                       <h3 className={`text-sm sm:text-base font-bold mb-1 ${theme.headingClass}`}>
-                        {products.length === 0 ? 'Katalog Produk Sedang Disiapkan' : 'Tidak Ada Produk di Kategori Ini'}
+                        Katalog Produk Sedang Disiapkan
                       </h3>
                       <p className="text-xs text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
-                        {products.length === 0
-                          ? 'Pemilik toko sedang mempersiapkan daftar produk pilihan terbaik.'
-                          : 'Belum ada produk untuk filter kategori yang Anda pilih.'}
+                        Pemilik toko sedang mempersiapkan daftar produk pilihan terbaik.
                       </p>
                       {website.whatsapp && (
                         <a
@@ -1237,17 +1406,167 @@ export const PublicWebsiteView: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    /* 5-Column Grid on Desktop (5 x N) */
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-3.5">
-                      {filteredProducts.map((p) => {
-                        if (sec.variant === 'minimal-frameless') {
+                    <>
+                      {/* 5-Column Grid on Desktop (5 x 2 rows = max 10 products) */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-3.5">
+                        {products.slice(0, 10).map((p) => {
+                          const promoInfo = getProductPromoInfo(p, data.promotions);
+                          const finalItem = promoInfo ? { ...p, price: promoInfo.discountedPrice } : p;
+
+                          if (sec.variant === 'minimal-frameless') {
+                            return (
+                              <div
+                                key={p.id}
+                                className="group flex flex-col justify-between transition-all"
+                              >
+                                <div>
+                                  <div className="relative aspect-square rounded-2xl bg-slate-100 overflow-hidden mb-2.5">
+                                    <img
+                                      src={p.image_url || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80'}
+                                      alt={p.name}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                    {p.category && (
+                                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-xs text-[10px] font-bold text-slate-800 shadow-xs">
+                                        {p.category}
+                                      </span>
+                                    )}
+                                    {promoInfo && (
+                                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-red-600 text-white font-black text-[10px] uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                        <Flame className="w-3 h-3 fill-white" />
+                                        <span>-{promoInfo.percent}%</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h3 className={`font-bold text-xs sm:text-[13px] line-clamp-2 leading-snug group-hover:text-blue-500 transition-colors ${
+                                    isDarkBg ? 'text-white' : 'text-slate-900'
+                                  }`}>
+                                    {p.name}
+                                  </h3>
+                                  <div className="mt-0.5">
+                                    {promoInfo ? (
+                                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                                        <span className="text-xs sm:text-sm font-black text-red-600 font-mono">
+                                          {formatIDR(promoInfo.discountedPrice)}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 line-through">
+                                          {formatIDR(p.price)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className={`text-xs sm:text-sm font-black ${isDarkBg ? 'text-blue-400' : 'text-blue-600'}`}>
+                                        {formatIDR(p.price)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="mt-2.5 flex gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => addItem(finalItem)}
+                                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
+                                      isDarkBg
+                                        ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                                    }`}
+                                    title="Tambah ke Keranjang"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Keranjang</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      addItem(finalItem);
+                                      setIsOpen(true);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
+                                    title="Beli Langsung"
+                                  >
+                                    <ShoppingBag className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
+
+
+                          if (sec.variant === 'overlay-badge') {
+                            return (
+                              <div
+                                key={p.id}
+                                className="group relative rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
+                              >
+                                <div className="relative aspect-square overflow-hidden bg-slate-100">
+                                  <img
+                                    src={p.image_url || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80'}
+                                    alt={p.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                  {p.category && (
+                                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-xs">
+                                      {p.category}
+                                    </span>
+                                  )}
+                                  {promoInfo && (
+                                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-red-600 text-white font-black text-[10px] uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                      <Flame className="w-3 h-3 fill-white" />
+                                      <span>-{promoInfo.percent}%</span>
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      addItem(finalItem);
+                                      setIsOpen(true);
+                                    }}
+                                    className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform absolute top-2 right-2"
+                                    title="Beli Langsung"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                <div className="p-2.5 sm:p-3">
+                                  <h3 className="font-bold text-xs sm:text-[13px] text-slate-900 line-clamp-2 leading-snug">
+                                    {p.name}
+                                  </h3>
+                                  <div className="mt-1.5 flex items-center justify-between">
+                                    {promoInfo ? (
+                                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                                        <span className="text-xs sm:text-sm font-black text-red-600 font-mono">
+                                          {formatIDR(promoInfo.discountedPrice)}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 line-through">
+                                          {formatIDR(p.price)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs sm:text-sm font-black text-blue-600">
+                                        {formatIDR(p.price)}
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => addItem(finalItem)}
+                                      className="text-[11px] font-bold text-slate-500 hover:text-blue-600 underline"
+                                    >
+                                      +Keranjang
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Default: 'standard-card' (Grid 5x Klasik Compact)
                           return (
                             <div
                               key={p.id}
-                              className="group flex flex-col justify-between transition-all"
+                              className="rounded-2xl border border-slate-200/90 hover:border-blue-400/80 bg-white shadow-xs hover:shadow-xl transition-all duration-200 flex flex-col justify-between overflow-hidden group"
                             >
                               <div>
-                                <div className="relative aspect-square rounded-2xl bg-slate-100 overflow-hidden mb-2.5">
+                                <div className="relative aspect-square bg-slate-100 overflow-hidden">
                                   <img
                                     src={p.image_url || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80'}
                                     alt={p.name}
@@ -1258,155 +1577,82 @@ export const PublicWebsiteView: React.FC = () => {
                                       {p.category}
                                     </span>
                                   )}
+                                  {promoInfo && (
+                                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-red-600 text-white font-black text-[10px] uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                      <Flame className="w-3 h-3 fill-white" />
+                                      <span>-{promoInfo.percent}%</span>
+                                    </span>
+                                  )}
                                 </div>
-                                <h3 className="font-bold text-xs sm:text-[13px] text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                                  {p.name}
-                                </h3>
-                                <div className="mt-0.5 flex items-center justify-between">
-                                  <span className="text-xs sm:text-sm font-black text-blue-600">
-                                    {formatIDR(p.price)}
-                                  </span>
+
+                                <div className="p-2.5 sm:p-3 space-y-1">
+                                  <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
+                                    {p.name}
+                                  </h3>
+                                  <div className="flex items-center gap-1 text-amber-400">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Star key={i} className="w-2.5 h-2.5 fill-amber-400" />
+                                    ))}
+                                  </div>
+                                  <div className="pt-0.5">
+                                    {promoInfo ? (
+                                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                                        <span className="text-xs sm:text-sm font-black text-red-600 font-mono">
+                                          {formatIDR(promoInfo.discountedPrice)}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 line-through">
+                                          {formatIDR(p.price)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs sm:text-sm font-black text-blue-600 block">
+                                        {formatIDR(p.price)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="mt-2.5 flex gap-1.5">
+                              <div className="p-2.5 sm:p-3 pt-0 grid grid-cols-2 gap-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => addItem(p)}
-                                  className="flex-1 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold transition-all flex items-center justify-center gap-1"
-                                  title="Tambah ke Keranjang"
+                                  onClick={() => addItem(finalItem)}
+                                  className="w-full py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] sm:text-[11px] font-bold transition-all flex items-center justify-center gap-1"
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
+                                  <Plus className="w-3 h-3" />
                                   <span>Keranjang</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    addItem(p);
+                                    addItem(finalItem);
                                     setIsOpen(true);
                                   }}
-                                  className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
-                                  title="Beli Langsung"
+                                  className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] sm:text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
                                 >
-                                  <ShoppingBag className="w-3.5 h-3.5" />
+                                  <ShoppingBag className="w-3 h-3" />
+                                  <span>Beli</span>
                                 </button>
                               </div>
                             </div>
                           );
-                        }
+                        })}
+                      </div>
 
-                        if (sec.variant === 'overlay-badge') {
-                          return (
-                            <div
-                              key={p.id}
-                              className="group relative rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
-                            >
-                              <div className="relative aspect-square overflow-hidden bg-slate-100">
-                                <img
-                                  src={p.image_url || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80'}
-                                  alt={p.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                {p.category && (
-                                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-xs">
-                                    {p.category}
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    addItem(p);
-                                    setIsOpen(true);
-                                  }}
-                                  className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform absolute top-2 right-2"
-                                  title="Beli Langsung"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-
-                              <div className="p-2.5 sm:p-3">
-                                <h3 className="font-bold text-xs sm:text-[13px] text-slate-900 line-clamp-2 leading-snug">
-                                  {p.name}
-                                </h3>
-                                <div className="mt-1.5 flex items-center justify-between">
-                                  <span className="text-xs sm:text-sm font-black text-blue-600">
-                                    {formatIDR(p.price)}
-                                  </span>
-                                  <button
-                                    onClick={() => addItem(p)}
-                                    className="text-[11px] font-bold text-slate-500 hover:text-blue-600 underline"
-                                  >
-                                    +Keranjang
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        // Default: 'standard-card' (Grid 5x Klasik Compact)
-                        return (
-                          <div
-                            key={p.id}
-                            className="rounded-2xl border border-slate-200/90 hover:border-blue-400/80 bg-white shadow-xs hover:shadow-xl transition-all duration-200 flex flex-col justify-between overflow-hidden group"
+                      {/* Tombol Lihat Semua Produk jika produk > 10 */}
+                      {products.length > 10 && (
+                        <div className="mt-8 text-center">
+                          <button
+                            type="button"
+                            onClick={() => navigate(productsUrl)}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-blue-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:text-blue-600 font-bold text-xs shadow-xs hover:shadow-md transition-all group"
                           >
-                            <div>
-                              <div className="relative aspect-square bg-slate-100 overflow-hidden">
-                                <img
-                                  src={p.image_url || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80'}
-                                  alt={p.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                {p.category && (
-                                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-xs text-[10px] font-bold text-slate-800 shadow-xs">
-                                    {p.category}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="p-2.5 sm:p-3 space-y-1">
-                                <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                                  {p.name}
-                                </h3>
-                                <div className="flex items-center gap-1 text-amber-400">
-                                  {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star key={i} className="w-2.5 h-2.5 fill-amber-400" />
-                                  ))}
-                                </div>
-                                <div className="pt-0.5">
-                                  <span className="text-xs sm:text-sm font-black text-blue-600 block">
-                                    {formatIDR(p.price)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="p-2.5 sm:p-3 pt-0 grid grid-cols-2 gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => addItem(p)}
-                                className="w-full py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] sm:text-[11px] font-bold transition-all flex items-center justify-center gap-1"
-                              >
-                                <Plus className="w-3 h-3" />
-                                <span>Keranjang</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  addItem(p);
-                                  setIsOpen(true);
-                                }}
-                                className="w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] sm:text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-xs"
-                              >
-                                <ShoppingBag className="w-3 h-3" />
-                                <span>Beli</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                            <span>Lihat Semua {products.length} Produk Lengkap</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </section>
@@ -1414,17 +1660,18 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'about': {
-            const isDarkBg = isColorDark(sec.bg_color);
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const isDarkBg = tokens.isDark;
             if (sec.variant === 'centered-card') {
               return (
-                <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+                <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="rounded-3xl sm:rounded-[2.5rem] border border-slate-200/80 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-6 sm:p-10 text-center max-w-4xl mx-auto shadow-sm space-y-4">
                       <span className={theme.badgeClass}>Tentang Usaha</span>
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} leading-tight`}>
+                      <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} leading-tight`}>
                         {sec.title || `Mengenal Lebih Dekat ${website.business_name}`}
                       </h2>
-                      <p className={`text-xs sm:text-sm leading-relaxed ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} max-w-2xl mx-auto whitespace-pre-line mt-1`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${tokens.bodyText} max-w-2xl mx-auto whitespace-pre-line mt-1`}>
                         {sec.subtitle || website.description}
                       </p>
 
@@ -1456,18 +1703,18 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'minimal-accent') {
               return (
-                <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+                <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                   <div className="max-w-4xl mx-auto px-4 sm:px-6">
                     <div className="border-l-4 border-blue-600 pl-6 sm:pl-8 space-y-2">
                       <span className="text-xs font-bold uppercase tracking-widest text-blue-600">Profil Toko</span>
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                      <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText}`}>
                         {sec.title || `Tentang ${website.business_name}`}
                       </h2>
-                      <p className={`text-xs sm:text-sm leading-relaxed ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} whitespace-pre-line mt-1`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${tokens.bodyText} whitespace-pre-line mt-1`}>
                         {sec.subtitle || website.description}
                       </p>
                       {website.address && (
-                        <p className={`text-xs ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} pt-2 flex items-center gap-2`}>
+                        <p className={`text-xs ${tokens.bodyText} pt-2 flex items-center gap-2`}>
                           <MapPin className="w-4 h-4 text-blue-600" />
                           <span>{website.address}</span>
                         </p>
@@ -1480,15 +1727,15 @@ export const PublicWebsiteView: React.FC = () => {
 
             // Default: 'split'
             return (
-              <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+              <section id="tentang" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                     <div className="space-y-2">
                       <span className={theme.badgeClass}>Tentang Usaha</span>
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>
+                      <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText}`}>
                         {sec.title || `Mengenal Lebih Dekat ${website.business_name}`}
                       </h2>
-                      <p className={`text-xs sm:text-sm leading-relaxed ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} whitespace-pre-line mt-1`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${tokens.bodyText} whitespace-pre-line mt-1`}>
                         {sec.subtitle || website.description}
                       </p>
                     </div>
@@ -1526,16 +1773,17 @@ export const PublicWebsiteView: React.FC = () => {
 
           case 'gallery': {
             if (galleries.length === 0) return null;
-            const isDarkBg = isColorDark(sec.bg_color);
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const isDarkBg = tokens.isDark;
             return (
-              <section id="galeri" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+              <section id="galeri" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="text-center max-w-2xl mx-auto mb-6">
                     <span className={theme.badgeClass}>Dokumentasi</span>
-                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                    <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} mt-1`}>
                       {sec.title || 'Galeri Workshop & Produksi'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                    <p className={`text-xs sm:text-sm ${tokens.bodyText} mt-1`}>
                       {sec.subtitle || 'Lihat proses pengerjaan bahan berkualitas tinggi langsung di tempat kami.'}
                     </p>
                   </div>
@@ -1563,16 +1811,17 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'testimonials': {
-            const isDarkBg = isColorDark(sec.bg_color);
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const isDarkBg = tokens.isDark;
             if (testimonials.length === 0) {
               return (
-                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
                     <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                    <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} mt-1`}>
                       {sec.title || 'Apa Kata Pelanggan Kami?'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} max-w-md mx-auto mt-1 mb-6`}>
+                    <p className={`text-xs sm:text-sm ${tokens.bodyText} max-w-md mx-auto mt-1 mb-6`}>
                       {sec.subtitle || 'Ulasan jujur dari pelanggan setia akan ditampilkan di bagian ini.'}
                     </p>
                     <div className="p-6 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/30 inline-flex flex-col items-center gap-2 max-w-sm mx-auto">
@@ -1594,13 +1843,13 @@ export const PublicWebsiteView: React.FC = () => {
             if (sec.variant === 'slider-carousel') {
               const current = testimonials[activeTestiIndex] || testimonials[0];
               return (
-                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-4">
                     <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                    <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} mt-1`}>
                       {sec.title || 'Apa Kata Pelanggan Kami?'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                    <p className={`text-xs sm:text-sm ${tokens.bodyText} mt-1`}>
                       {sec.subtitle || 'Ulasan jujur dari pembeli yang telah menggunakan produk kami.'}
                     </p>
                     <div className="relative py-4 px-4">
@@ -1616,8 +1865,8 @@ export const PublicWebsiteView: React.FC = () => {
                             <span className="font-black text-sm text-slate-600 flex items-center justify-center w-full h-full">{current.client_name.charAt(0)}</span>
                           )}
                         </div>
-                        <h4 className={`font-bold text-xs sm:text-sm ${isDarkBg ? 'text-white' : 'text-slate-900'}`}>{current.client_name}</h4>
-                        <span className={`text-[11px] ${isDarkBg ? 'text-slate-300' : 'text-slate-400'}`}>{current.role_or_company}</span>
+                        <h4 className={`font-bold text-xs sm:text-sm ${tokens.headingText}`}>{current.client_name}</h4>
+                        <span className={`text-[11px] ${tokens.bodyText}`}>{current.role_or_company}</span>
                         <div className="flex text-amber-400 pt-0.5">
                           {Array.from({ length: current.rating }).map((_, i) => (
                             <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
@@ -1661,14 +1910,14 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'speech-bubble') {
               return (
-                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+                <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="text-center max-w-2xl mx-auto mb-6">
                       <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                      <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                      <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} mt-1`}>
                         {sec.title || 'Apa Kata Pelanggan Kami?'}
                       </h2>
-                      <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                      <p className={`text-xs sm:text-sm ${tokens.bodyText} mt-1`}>
                         {sec.subtitle || 'Ulasan jujur dari pembeli yang telah menggunakan produk kami.'}
                       </p>
                     </div>
@@ -1696,7 +1945,7 @@ export const PublicWebsiteView: React.FC = () => {
                             </div>
                             <div className="ml-auto flex text-amber-400">
                               {Array.from({ length: testi.rating }).map((_, i) => (
-                                <Star key={i} className="w-3 h-3 fill-amber-400" />
+                                <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
                               ))}
                             </div>
                           </div>
@@ -1710,14 +1959,14 @@ export const PublicWebsiteView: React.FC = () => {
 
             // Default: 'grid-cards'
             return (
-              <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${theme.borderClass}`}>
+              <section id="testimoni" key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-8 sm:py-10 border-b ${tokens.borderClass}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                   <div className="text-center max-w-2xl mx-auto mb-6">
                     <span className={theme.badgeClass}>Kepuasan Pembeli</span>
-                    <h2 className={`text-xl sm:text-2xl ${theme.headingClass} font-black tracking-tight ${isDarkBg ? 'text-white' : 'text-slate-900'} mt-1`}>
+                    <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${tokens.headingText} mt-1`}>
                       {sec.title || 'Apa Kata Pelanggan Kami?'}
                     </h2>
-                    <p className={`text-xs sm:text-sm ${theme.textClass} ${isDarkBg ? 'text-slate-300' : 'text-slate-500'} mt-1`}>
+                    <p className={`text-xs sm:text-sm ${tokens.bodyText} mt-1`}>
                       {sec.subtitle || 'Ulasan jujur dari pembeli yang telah menggunakan produk kami.'}
                     </p>
                   </div>
@@ -1810,39 +2059,42 @@ export const PublicWebsiteView: React.FC = () => {
           }
 
           case 'footer': {
+            const tokens = resolveContrastTokens(sec.bg_color, sec.text_color_mode);
+            const isDarkBg = tokens.isDark;
+
             if (sec.variant === 'centered') {
               return (
-                <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className="py-14 border-t border-slate-200/60 text-xs">
+                <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-14 border-t ${tokens.borderClass} text-xs`}>
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
                     <div className="flex flex-col items-center">
                       {website.logo_url && (
-                        <img src={website.logo_url} alt={website.business_name} className="w-12 h-12 rounded-xl object-cover mb-2 border" />
+                        <img src={website.logo_url} alt={website.business_name} className="w-12 h-12 rounded-xl object-cover mb-2 border border-slate-200/50" />
                       )}
-                      <div className="font-bold text-base text-slate-900 dark:text-white">{website.business_name}</div>
-                      <p className="text-slate-500 text-xs mt-1 max-w-md">{website.tagline || 'Toko E-Commerce Resmi'}</p>
+                      <div className={`font-bold text-base ${tokens.headingText}`}>{website.business_name}</div>
+                      <p className={`${tokens.bodyText} text-xs mt-1 max-w-md`}>{website.tagline || 'Toko E-Commerce Resmi'}</p>
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-6 text-slate-600 dark:text-slate-300 font-semibold">
-                      <a href="#katalog" className="hover:text-blue-600 transition-colors">Katalog</a>
-                      <a href="#promo" className="hover:text-blue-600 transition-colors">Promo</a>
-                      <a href="#tentang" className="hover:text-blue-600 transition-colors">Tentang Kami</a>
-                      <a href="#kontak" className="hover:text-blue-600 transition-colors">Kontak</a>
+                    <div className={`flex flex-wrap justify-center gap-6 font-semibold ${isDarkBg ? 'text-slate-300' : 'text-slate-600'}`}>
+                      <a href="#katalog" className="hover:text-blue-500 transition-colors">Katalog</a>
+                      <a href="#promo" className="hover:text-blue-500 transition-colors">Promo</a>
+                      <a href="#tentang" className="hover:text-blue-500 transition-colors">Tentang Kami</a>
+                      <a href="#kontak" className="hover:text-blue-500 transition-colors">Kontak</a>
                     </div>
 
                     <div className="flex justify-center gap-3 pt-2">
                       {website.instagram && (
-                        <a href={`https://instagram.com/${website.instagram}`} target="_blank" rel="noreferrer" className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+                        <a href={`https://instagram.com/${website.instagram}`} target="_blank" rel="noreferrer" className={`p-2 rounded-xl ${isDarkBg ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
                           <InstagramIcon className="w-4 h-4" />
                         </a>
                       )}
                       {website.facebook && (
-                        <a href={`https://facebook.com/${website.facebook}`} target="_blank" rel="noreferrer" className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+                        <a href={`https://facebook.com/${website.facebook}`} target="_blank" rel="noreferrer" className={`p-2 rounded-xl ${isDarkBg ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
                           <FacebookIcon className="w-4 h-4" />
                         </a>
                       )}
                     </div>
 
-                    <div className="pt-4 border-t border-slate-200/60 text-slate-400">
+                    <div className={`pt-4 border-t ${tokens.borderClass} ${isDarkBg ? 'text-slate-400' : 'text-slate-400'}`}>
                       © {new Date().getFullYear()} {website.business_name}. Seluruh hak cipta dilindungi undang-undang.
                     </div>
                   </div>
@@ -1852,19 +2104,19 @@ export const PublicWebsiteView: React.FC = () => {
 
             if (sec.variant === 'compact-bar') {
               return (
-                <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className="py-6 border-t border-slate-200/60 text-xs">
+                <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-6 border-t ${tokens.borderClass} text-xs`}>
                   <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <span className="text-slate-500">
-                      © {new Date().getFullYear()} <strong className="text-slate-800 dark:text-white">{website.business_name}</strong>. All rights reserved.
+                    <span className={tokens.bodyText}>
+                      © {new Date().getFullYear()} <strong className={tokens.headingText}>{website.business_name}</strong>. All rights reserved.
                     </span>
                     <div className="flex items-center gap-3">
                       {website.instagram && (
-                        <a href={`https://instagram.com/${website.instagram}`} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-blue-600">
+                        <a href={`https://instagram.com/${website.instagram}`} target="_blank" rel="noreferrer" className={`${isDarkBg ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-blue-600'}`}>
                           <InstagramIcon className="w-4 h-4" />
                         </a>
                       )}
                       {website.facebook && (
-                        <a href={`https://facebook.com/${website.facebook}`} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-blue-600">
+                        <a href={`https://facebook.com/${website.facebook}`} target="_blank" rel="noreferrer" className={`${isDarkBg ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-blue-600'}`}>
                           <FacebookIcon className="w-4 h-4" />
                         </a>
                       )}
@@ -1885,7 +2137,7 @@ export const PublicWebsiteView: React.FC = () => {
 
             // Default: 'multi-column' (4 Kolom Komprehensif E-Commerce)
             return (
-              <footer key={sec.id} className="py-14 border-t border-slate-200/70 text-xs bg-slate-50/50 dark:bg-slate-900/30">
+              <footer key={sec.id} style={{ backgroundColor: sec.bg_color || undefined }} className={`py-14 border-t ${tokens.borderClass} text-xs ${sec.bg_color ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                   {/* Col 1: Store info */}
                   <div className="space-y-3">
@@ -1893,24 +2145,24 @@ export const PublicWebsiteView: React.FC = () => {
                       {website.logo_url && (
                         <img src={website.logo_url} alt={website.business_name} className="w-8 h-8 rounded-lg object-cover" />
                       )}
-                      <span className="font-extrabold text-sm text-slate-900 dark:text-white">{website.business_name}</span>
+                      <span className={`font-extrabold text-sm ${tokens.headingText}`}>{website.business_name}</span>
                     </div>
-                    <p className={`text-slate-500 leading-relaxed`}>{website.tagline || website.description}</p>
-                    <p className="text-[11px] text-slate-400 pt-2">
+                    <p className={`${tokens.bodyText} leading-relaxed`}>{website.tagline || website.description}</p>
+                    <p className={`text-[11px] ${tokens.bodyText} opacity-75 pt-2`}>
                       © {new Date().getFullYear()} {website.business_name}. All rights reserved.
                     </p>
                   </div>
 
                   {/* Col 2: Quick Links & Categories */}
                   <div className="space-y-3">
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Kategori Belanja</h4>
-                    <ul className="space-y-2 text-slate-600 dark:text-slate-400">
+                    <h4 className={`font-bold text-sm uppercase tracking-wider text-[11px] ${tokens.headingText}`}>Kategori Belanja</h4>
+                    <ul className={`space-y-2 ${isDarkBg ? 'text-slate-300' : 'text-slate-600'}`}>
                       <li>
-                        <a href="#katalog" onClick={() => setActiveCategory('all')} className="hover:text-blue-600 transition-colors">Semua Produk</a>
+                        <a href="#katalog" onClick={() => setActiveCategory('all')} className="hover:text-blue-500 transition-colors">Semua Produk</a>
                       </li>
                       {categories.slice(0, 4).map(c => (
                         <li key={c}>
-                          <a href="#katalog" onClick={() => setActiveCategory(c)} className="hover:text-blue-600 transition-colors">{c}</a>
+                          <a href="#katalog" onClick={() => setActiveCategory(c)} className="hover:text-blue-500 transition-colors">{c}</a>
                         </li>
                       ))}
                     </ul>
@@ -1918,8 +2170,8 @@ export const PublicWebsiteView: React.FC = () => {
 
                   {/* Col 3: Operational & Payment */}
                   <div className="space-y-3">
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Metode Pembayaran</h4>
-                    <div className="space-y-2 text-slate-600 dark:text-slate-400">
+                    <h4 className={`font-bold text-sm uppercase tracking-wider text-[11px] ${tokens.headingText}`}>Metode Pembayaran</h4>
+                    <div className={`space-y-2 ${isDarkBg ? 'text-slate-300' : 'text-slate-600'}`}>
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px]">TRANSFER BANK</span>
                         <span className="text-[11px]">{website.bank_name || 'BCA / Mandiri'}</span>
@@ -1939,17 +2191,17 @@ export const PublicWebsiteView: React.FC = () => {
 
                   {/* Col 4: Customer Help & Socials */}
                   <div className="space-y-3">
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Layanan Pelanggan</h4>
-                    <div className="space-y-2 text-slate-600 dark:text-slate-400">
+                    <h4 className={`font-bold text-sm uppercase tracking-wider text-[11px] ${tokens.headingText}`}>Layanan Pelanggan</h4>
+                    <div className={`space-y-2 ${isDarkBg ? 'text-slate-300' : 'text-slate-600'}`}>
                       {website.phone && (
                         <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-blue-600" />
+                          <Phone className="w-3.5 h-3.5 text-blue-500" />
                           <span>{website.phone}</span>
                         </div>
                       )}
                       {website.email && (
                         <div className="flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5 text-blue-600" />
+                          <Mail className="w-3.5 h-3.5 text-blue-500" />
                           <span>{website.email}</span>
                         </div>
                       )}
@@ -1961,7 +2213,7 @@ export const PublicWebsiteView: React.FC = () => {
                           href={`https://instagram.com/${website.instagram}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          className={`p-2 rounded-lg ${isDarkBg ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} transition-colors`}
                         >
                           <InstagramIcon className="w-3.5 h-3.5" />
                         </a>
@@ -1971,7 +2223,7 @@ export const PublicWebsiteView: React.FC = () => {
                           href={`https://facebook.com/${website.facebook}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          className={`p-2 rounded-lg ${isDarkBg ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} transition-colors`}
                         >
                           <FacebookIcon className="w-3.5 h-3.5" />
                         </a>

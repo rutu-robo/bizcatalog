@@ -13,7 +13,8 @@ import {
   UpdateOrderAdminPayload,
   Testimonial,
   GalleryItem,
-  Category
+  Category,
+  Promotion
 } from '../types';
 
 const BASE_URL = '/api';
@@ -272,6 +273,41 @@ export const api = {
 
   async deleteGallery(id: string): Promise<{ message: string }> {
     const res = await fetch(`${BASE_URL}/galleries/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ message: string }>(res);
+  },
+
+  // Promotions
+  async getPromotions(): Promise<Promotion[]> {
+    const res = await fetch(`${BASE_URL}/promotions`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleResponse<Promotion[]>(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  async createPromotion(payload: Partial<Promotion>): Promise<Promotion> {
+    const res = await fetch(`${BASE_URL}/promotions`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<Promotion>(res);
+  },
+
+  async updatePromotion(id: string, payload: Partial<Promotion>): Promise<Promotion> {
+    const res = await fetch(`${BASE_URL}/promotions/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<Promotion>(res);
+  },
+
+  async deletePromotion(id: string): Promise<{ message: string }> {
+    const res = await fetch(`${BASE_URL}/promotions/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });

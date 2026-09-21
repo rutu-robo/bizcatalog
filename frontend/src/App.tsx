@@ -13,9 +13,11 @@ import { AssetLibraryPage } from './pages/dashboard/AssetLibraryPage';
 import { GalleryTestimonialsPage } from './pages/dashboard/GalleryTestimonialsPage';
 import { ThemeSelectorPage } from './pages/dashboard/ThemeSelectorPage';
 import { SectionBuilderPage } from './pages/dashboard/SectionBuilderPage';
+import { PromotionsPage } from './pages/dashboard/PromotionsPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
 import { PublicWebsiteView } from './pages/public/PublicWebsiteView';
 import { PublicOrderDetailPage } from './pages/public/PublicOrderDetailPage';
+import { PublicProductsPage } from './pages/public/PublicProductsPage';
 
 export const App: React.FC = () => {
   const host = window.location.hostname;
@@ -35,6 +37,8 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/order/:orderNumber" element={<PublicOrderDetailPage />} />
+          <Route path="/products" element={<PublicProductsPage />} />
+          <Route path="/katalog" element={<PublicProductsPage />} />
           <Route path="*" element={<PublicWebsiteView />} />
         </Routes>
       </BrowserRouter>
@@ -56,6 +60,7 @@ export const App: React.FC = () => {
           <Route path="company" element={<CompanyProfilePage />} />
           <Route path="products" element={<ProductCatalogPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="promos" element={<PromotionsPage />} />
           <Route path="assets" element={<AssetLibraryPage />} />
           <Route path="gallery" element={<GalleryTestimonialsPage />} />
           <Route path="theme" element={<ThemeSelectorPage />} />
@@ -65,6 +70,8 @@ export const App: React.FC = () => {
 
         {/* Dynamic Public Generated Website Route & Order Invoice */}
         <Route path="/site/:subdomain" element={<PublicWebsiteView />} />
+        <Route path="/site/:subdomain/products" element={<PublicProductsPage />} />
+        <Route path="/site/:subdomain/katalog" element={<PublicProductsPage />} />
         <Route path="/site/:subdomain/order/:orderNumber" element={<PublicOrderDetailPage />} />
 
         {/* Fallback */}

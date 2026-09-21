@@ -14,7 +14,8 @@ import {
   LogOut,
   Sparkles,
   Quote,
-  Tags
+  Tags,
+  BadgePercent
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -32,6 +33,7 @@ export const Sidebar: React.FC = () => {
     { name: 'Profil Usaha', path: '/dashboard/company', icon: Building2 },
     { name: 'Katalog Produk', path: '/dashboard/products', icon: Package },
     { name: 'Kategori Produk', path: '/dashboard/categories', icon: Tags },
+    { name: 'Promo & Kupon', path: '/dashboard/promos', icon: BadgePercent },
     { name: 'Aset Media', path: '/dashboard/assets', icon: ImageIcon },
     { name: 'Galeri & Testimoni', path: '/dashboard/gallery', icon: Quote },
     { name: 'Pilih Tema', path: '/dashboard/theme', icon: Palette },
